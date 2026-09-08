@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}聊天 · 研投圈{% endblock %}
+{% block content %}
+<h1 class="h1">聊天</h1>
+{% if not items %}
+<div class="empty mt-32">
+  <svg viewBox="0 0 24 24"><path d="M5 6h14v10H8l-3 3V6z"/></svg>
+  <div class="display">还没有对话</div>
+  <p class="caption">去话题页找同好，打个招呼就开始聊</p>
+  <a class="btn btn-primary mt-16" href="{{ url_for('topics.square') }}">去话题</a>
+</div>
+{% else %}
+<div class="chat-inbox mt-16">
+  {% for it in items %}
+  <a class="list-row chat-inbox-row" href="{{ url_for('chat.page', user_id=it.peer.id) }}">
+    <div class="chat-inbox-av">
+      {{ avatar(it.peer.avatar, it.peer.nickname[:1]) }}
+      {% if it.peer.online %}<span class="dot on"></span>{% endif %}
+    </div>
+    <div class="grow" style="min-width:0">
+      <div class="flex between center gap-8">
+        <strong class="truncate">{{ it.peer.nickname }}</strong>
+        <span class="caption nowrap">{{ it.time }}</span>
+      </div>
+      <div class="flex between center gap-8 mt-8">
+        <span class="caption truncate {% if it.unread %}unread{% endif %}">{{ it.preview }}</span>
+        {% if it.unread %}<span class="badge">{{ it.unread }}</span>{% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

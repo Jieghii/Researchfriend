@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}收到的好友请求 · 研投圈{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">收到的好友请求</h1>
+</div>
+<p class="caption mb-16">同意后，你们会出现在彼此的好友列表里</p>
+{% if not cards %}
+<div class="empty">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  <div class="display">还没有人向你打招呼</div>
+  <p class="caption mt-8">完善下兴趣标签，更容易被看到</p>
+  <a class="btn btn-primary mt-16" href="{{ url_for('profile.me_page') }}">去完善</a>
+</div>
+{% else %}
+{% for c in cards %}
+<div class="card req-card" style="padding:20px;margin-bottom:16px">
+  <div class="flex gap-12">
+    {{ avatar(c.user.avatar, c.user.nickname[:1]) }}
+    <div class="grow">
+      <div class="flex between">
+        <strong>{{ c.user.nickname }}</strong>
+        <span class="caption">{{ c.rel }}</span>
+      </div>
+      <div class="caption mt-8">{{ c.user.role }} · {{ c.user.years }}
+        {% if c.pct is not none %} · 重合度 <span class="mono" style="color:var(--accent)">{{ c.pct }}%</span>{% endif %}
+      </div>
+      <div class="flex wrap gap-8 mt-8">
+        {% for t in c.common %}<span class="pill common">{{ t.name }}</span>{% endfor %}
+      </div>
+      <blockquote class="quote mt-16">「{{ c.req.greeting }}」</blockquote>
+      <div class="flex gap-12 mt-16" style="justify-content:flex-end">
+        <button type="button" class="btn btn-danger" data-reject="{{ c.req.id }}">拒绝</button>
+        <button type="button" class="btn btn-primary" data-accept="{{ c.req.id }}">同意</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

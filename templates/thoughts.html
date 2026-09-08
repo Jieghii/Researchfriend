@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "macros.html" import thought_card %}
+{% block title %}随想 · 研投圈{% endblock %}
+{% block content %}
+{% set sort = sort or 'new' %}
+<div class="tabs">
+  <a class="{% if scope=='all' %}on{% endif %}" href="{{ url_for('thoughts.timeline', tag=tag.id if tag else none, sort=sort) }}">全部</a>
+  <a class="{% if scope=='mine' %}on{% endif %}" href="{{ url_for('thoughts.timeline', scope='mine', tag=tag.id if tag else none, sort=sort) }}">我的</a>
+</div>
+<div class="thought-filter thought-filter-search mb-16">
+  <span class="caption">话题筛选</span>
+  <a class="pill {% if not tag %}common{% endif %}" href="{{ url_for('thoughts.timeline', scope=scope, sort=sort) }}">全部</a>
+  {% if tag %}
+  <span class="pill common x">#{{ tag.name }} <a href="{{ url_for('thoughts.timeline', scope=scope, sort=sort) }}" aria-label="清除筛选">×</a></span>
+  {% endif %}
+  <div class="thought-tag-search">
+    <input class="field" id="thought-tag-search" placeholder="搜索话题" autocomplete="off" data-scope="{{ scope }}" data-sort="{{ sort }}">
+    <div id="thought-tag-drop" class="card topic-drop" hidden></div>
+  </div>
+</div>
+<div class="thought-filter thought-filter-sort mb-16">
+  <span class="caption">排序</span>
+  {% for key, label in sort_options %}
+  <a class="pill {% if sort==key %}common{% endif %}" href="{{ url_for('thoughts.timeline', scope=scope, tag=tag.id if tag else none, sort=key) }}">{{ label }}</a>
+  {% endfor %}
+</div>
+{% if not items %}
+<div class="empty">
+  <svg viewBox="0 0 24 24"><path d="M5 6h14v12H5z"/><path d="M8 10h8M8 14h5"/></svg>
+  <div class="display">还没有随想</div>
+  <button type="button" class="btn btn-primary mt-16" data-open-compose>发第一条随想</button>
+</div>
+{% else %}
+{% for it in items %}
+{{ thought_card(it) }}
+{% endfor %}
+<div id="load-more" class="caption" data-scope="{{ scope }}" data-tag="{{ tag.id if tag else '' }}" data-sort="{{ sort }}" style="max-width:680px;text-align:center;padding:16px">{% if has_more %}下滑加载更多{% else %}没有更多了{% endif %}</div>
+{% endif %}
+<button type="button" class="fab-chat" data-open-compose aria-label="发布随想">发布随想</button>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/thoughts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

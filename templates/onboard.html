@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}完善资料 · 研投圈{% endblock %}
+{% block content %}
+<div id="onboard" style="max-width:560px;margin:0 auto">
+  <div class="flex between center mb-16">
+    <h1 class="h1">完善你的资料</h1>
+    <span class="micro" id="prog-label">1/3</span>
+  </div>
+  <div class="onboard-progress"><span id="prog" style="width:33%"></span></div>
+
+  <section data-step="1">
+    <h2 class="h2">你的身份</h2>
+    <div class="choice-grid mt-16">
+      <button type="button" class="choice" data-role="buyer">
+        <div class="h2">买方</div>
+        <p class="caption mt-8">投资经理 / 买方研究员 / 自营</p>
+      </button>
+      <button type="button" class="choice" data-role="seller">
+        <div class="h2">卖方</div>
+        <p class="caption mt-8">卖方分析师 / 机构销售 / 研究支持</p>
+      </button>
+    </div>
+    <div class="flex mt-32" style="justify-content:flex-end">
+      <button type="button" class="btn btn-primary" id="next-1" disabled>下一步</button>
+    </div>
+  </section>
+
+  <section data-step="2" style="display:none">
+    <button type="button" class="btn-text back" id="back-2">上一步</button>
+    <h2 class="h2 mt-16">工作年限</h2>
+    <div class="year-grid mt-16">
+      {% for y in years %}
+      <button type="button" class="choice" data-years="{{ y }}">{{ y }}</button>
+      {% endfor %}
+    </div>
+    <div class="flex mt-32" style="justify-content:flex-end">
+      <button type="button" class="btn btn-primary" id="next-2" disabled>下一步</button>
+    </div>
+  </section>
+
+  <section data-step="3" style="display:none">
+    <button type="button" class="btn-text back" id="back-3">上一步</button>
+    <h2 class="h2 mt-16">你的兴趣标签</h2>
+    <div class="flex wrap gap-8 mt-16" id="selected"></div>
+    <input class="field mt-16" id="tag-search" placeholder="搜行业或个股，比如「白酒」「贵州茅台」">
+    <p class="caption mt-8" id="custom-hint" style="display:none"></p>
+    <p class="h2 mt-24">热门行业</p>
+    <div class="flex wrap gap-8 mt-8">
+      {% for n in preset_industries %}
+      <button type="button" class="pill" data-add-tag data-name="{{ n }}" data-kind="industry">{{ n }}</button>
+      {% endfor %}
+    </div>
+    <p class="h2 mt-24">热门个股</p>
+    <div class="flex wrap gap-8 mt-8">
+      {% for n in preset_stocks %}
+      <button type="button" class="pill" data-add-tag data-name="{{ n }}" data-kind="stock">{{ n }}</button>
+      {% endfor %}
+    </div>
+    <p class="caption mt-16">最多 10 个。标签越多，匹配越准。随时可以在「我的」里修改</p>
+    <div class="flex between center mt-32">
+      <button type="button" class="btn-text" id="skip-tags">先看看，稍后再设</button>
+      <button type="button" class="btn btn-primary" id="start-match">开始匹配</button>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

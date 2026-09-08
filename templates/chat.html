@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}{{ peer.nickname }} · 聊天{% endblock %}
+{% block content %}
+<div class="chat-wrap" style="position:relative">
+  <div class="page-head">
+    <a class="back" href="{{ url_for('chat.inbox') }}">◀</a>
+    <div class="grow">
+      <h1 class="h1">{{ peer.nickname }}</h1>
+      {% if source %}
+      <p class="caption">来自话题：{{ source.name }}</p>
+      {% else %}
+      <p class="caption">{{ peer.role }} · {{ peer.years }} · {{ peer.active_text }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% if not friends %}
+  <div class="banner" id="friend-bar">你们还不是好友
+    <button type="button" class="btn btn-primary" id="add-friend-btn" {% if pending_sent %}disabled{% endif %} style="height:32px;margin-left:12px">{% if pending_sent %}请求已发送，等待对方同意{% else %}加为好友{% endif %}</button>
+  </div>
+  {% endif %}
+  <div class="warn-bar" id="chat-warn" style="display:none">消息可能没更新，检查下网络</div>
+  <div class="chat-stream" id="chat-stream" data-conv="{{ conv.id }}" data-last="{{ last_id }}" data-peer="{{ peer.id }}"
+       data-me-av="{{ avatar_index }}" data-me-ch="{{ current_user.nickname[:1] }}"
+       data-peer-av="{{ peer.avatar }}" data-peer-ch="{{ peer.nickname[:1] }}">
+    {% if not messages %}
+    <div class="empty">
+      <div class="display">打个招呼吧，从一句「最近在看什么」开始</div>
+      <div class="flex wrap gap-8 center" style="justify-content:center;margin-top:16px">
+        <button type="button" class="btn btn-ghost" data-quick="最近在看什么？">最近在看什么？</button>
+        <button type="button" class="btn btn-ghost" data-quick="你怎么看这个行业的景气？">你怎么看这个行业的景气？</button>
+        <button type="button" class="btn btn-ghost" data-quick="方便交流一下框架吗？">方便交流一下框架吗？</button>
+      </div>
+    </div>
+    {% endif %}
+    {% for m in messages %}
+      {% if m.sep %}<div class="time-sep">{{ m.sep }}</div>{% endif %}
+      <div class="bubble-row {% if m.mine %}mine{% else %}theirs{% endif %}" data-id="{{ m.id }}">
+        {% if m.show_meta %}
+          {% if m.mine %}{{ avatar(avatar_index, current_user.nickname[:1], 'sm') }}{% else %}{{ avatar(peer.avatar, peer.nickname[:1], 'sm') }}{% endif %}
+        {% endif %}
+        <div class="bubble">{{ m.content }}</div>
+      </div>
+    {% endfor %}
+  </div>
+  <button type="button" class="new-msg-fab" id="new-msg-fab">新消息 ↓</button>
+  <div class="chat-input">
+    <textarea class="field" id="chat-input" rows="1" maxlength="500" placeholder="发一条消息"></textarea>
+    <button type="button" class="btn btn-primary" id="chat-send" disabled>发送</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat-poll.js') }}"></script>
+{% endblock %}

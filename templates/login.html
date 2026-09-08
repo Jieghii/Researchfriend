@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}登录 · 研投圈{% endblock %}
+{% block guest %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <h1 class="display">研投圈</h1>
+    <p class="caption mt-8">按研究重合度，找到能聊到一起的人</p>
+    <form method="post" id="login-form" class="mt-32">
+      <input class="field" id="nickname" name="nickname" maxlength="16" placeholder="给自己起个圈内昵称" value="{{ form.nickname if form else '' }}" autocomplete="username">
+      <div class="pw-wrap mt-16">
+        <input class="field" id="password" name="password" type="password" placeholder="设置 / 输入密码" autocomplete="current-password">
+        <button type="button" class="pw-toggle" id="pw-toggle" aria-label="显示密码">显</button>
+      </div>
+      {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+      <button type="submit" class="btn btn-primary mt-24" id="login-btn" style="width:100%">进入研投圈</button>
+    </form>
+    <p class="caption mt-16" style="text-align:center">还没有账号？点这里注册</p>
+    <p class="disclaimer">本站为演示项目，请勿填写真实个人信息与真实密码</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

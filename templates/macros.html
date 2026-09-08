@@ -1,0 +1,49 @@
+{% macro svg_user() %}
+<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+{% endmacro %}
+{% macro svg_hash() %}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14M9 4L7 20M17 4l-2 16"/></svg>
+{% endmacro %}
+{% macro svg_chat() %}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h10v8H8l-3 3V6z"/><path d="M15 9h4v8l-3-3h-1"/></svg>
+{% endmacro %}
+{% macro svg_pen() %}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M13 6l4 4"/></svg>
+{% endmacro %}
+{% macro svg_me() %}
+<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="10" r="2.5"/><path d="M8 17c1-2 2.5-3 4-3s3 1 4 3"/></svg>
+{% endmacro %}
+{% macro svg_heart() %}
+<svg viewBox="0 0 24 24"><path d="M12 19s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg>
+{% endmacro %}
+{% macro svg_comment() %}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v10H8l-3 3V6z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+{% endmacro %}
+
+{% macro avatar(index, ch, size='') %}
+<div class="avatar {{ size }} av-{{ index }}">{{ ch }}</div>
+{% endmacro %}
+
+{% macro thought_card(it) %}
+<article class="card thought-card card-hover" style="position:relative">
+  {% if it.mine %}
+  <button type="button" class="icon-btn" style="position:absolute;right:8px;top:8px" data-del-thought="{{ it.id }}" aria-label="删除">···</button>
+  {% endif %}
+  <a href="/users/{{ it.author.id }}" class="flex gap-12 center">
+    {{ avatar(it.author.avatar, it.author.nickname[:1]) }}
+    <div class="grow" style="min-width:0">
+      <div class="flex gap-8 center">
+        <strong class="truncate">{{ it.author.nickname }}</strong>
+        <span class="role-chip {% if it.author.role=='买方' %}buyer{% endif %}">{{ it.author.role }}{% if it.author.years %} · {{ it.author.years }}{% endif %}</span>
+        {% if it.locked %}<span class="lock caption" title="仅自己可见">锁</span>{% endif %}
+      </div>
+      <div class="caption mt-8">{{ it.rel_time }}{% for t in it.tags %} · <a href="/topics/{{ t.id }}">#{{ t.name }}</a>{% endfor %}</div>
+    </div>
+  </a>
+  <a href="/thoughts/{{ it.id }}"><p class="thought-body clamp">{{ it.body }}</p></a>
+  <div class="flex gap-16 center">
+    <button type="button" class="like-btn {% if it.liked %}on{% endif %}" data-like="{{ it.id }}" aria-label="点赞">{{ svg_heart() }} <span data-n>{{ it.likes }}</span></button>
+    <a class="like-btn" href="/thoughts/{{ it.id }}?focus=1" aria-label="评论">{{ svg_comment() }} {{ it.comments }}</a>
+  </div>
+</article>
+{% endmacro %}

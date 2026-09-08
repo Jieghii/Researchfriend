@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, thought_card %}
+{% block title %}{{ person.nickname }} · 研投圈{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="javascript:history.back()" aria-label="返回">◀</a>
+  <h1 class="h1 grow">{{ person.nickname }}</h1>
+</div>
+<div class="card" style="padding:24px">
+  <div class="flex gap-16 center">
+    {{ avatar(person.avatar, person.nickname[:1], 'lg') }}
+    <div class="grow">
+      <h1 class="h1">{{ person.nickname }}</h1>
+      <p class="caption mt-8">{{ person.role }} · {{ person.years }} · <span class="dot {% if person.online %}on{% endif %}"></span> {{ person.active_text }}</p>
+      {% if person.pct is not none %}
+      <p class="pct-badge numeric-l mt-16" style="margin-bottom:0">{{ person.pct }}<small>%</small> <span class="caption">重合度</span></p>
+      {% else %}
+      <p class="caption mt-16">重合度 —</p>
+      {% endif %}
+      <div class="flex wrap gap-8 mt-12">
+        {% for t in person.common %}
+        <span class="pill common">{{ t.name }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="mt-32">
+  <h2 class="h2">Ta 的兴趣标签</h2>
+  <div class="flex wrap gap-8 mt-12">
+      {% set common_names = person.common | map(attribute='name') | list %}
+      {% for t in their_tags %}
+    <span class="pill {% if t.name in common_names %}common{% endif %}">{{ t.name }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">Ta 的随想</h2>
+  <div class="mt-16">
+    {% for it in items %}
+    {{ thought_card(it) }}
+    {% else %}
+    <p class="caption">还没有公开随想</p>
+    {% endfor %}
+  </div>
+</section>
+
+{% if friends %}
+<a class="fab-chat" href="{{ url_for('chat.page', user_id=person.id) }}" style="display:inline-flex">发消息</a>
+{% elif pending %}
+<button type="button" class="fab-chat" disabled>请求已发送</button>
+{% else %}
+<button type="button" class="fab-chat" id="user-greet" style="display:inline-flex">打招呼</button>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/match-cards.js') }}"></script>
+<script src="{{ url_for('static', filename='js/thoughts.js') }}"></script>
+<script>
+(function () {
+  var b = document.getElementById("user-greet");
+  if (b) b.addEventListener("click", function () {
+    window.openGreetFor({ id: {{ person.id }}, nickname: {{ person.nickname|tojson }}, common: {{ person.common|tojson }} });
+  });
+})();
+</script>
+{% endblock %}

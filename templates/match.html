@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}加好友 · 研投圈{% endblock %}
+{% block content %}
+<p class="caption" id="skip-hint" style="display:none;text-align:center"></p>
+{% if cold %}
+<div class="empty">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/></svg>
+  <div class="display">先选几个兴趣标签，我才好给你推荐人</div>
+  <a class="btn btn-primary mt-16" href="{{ url_for('profile.me_page') }}">去设置</a>
+</div>
+{% else %}
+<div class="match-stage">
+  <div id="match-err" class="err-bar" style="display:none">加载失败了，检查下网络？ <button type="button" class="btn btn-ghost" id="match-retry">重试</button></div>
+  <div id="match-skel" class="card match-card" style="display:block">
+    <div class="skeleton" style="width:120px;height:32px;margin-bottom:16px"></div>
+    <div class="skeleton" style="width:72px;height:72px;border-radius:50%"></div>
+    <div class="skeleton mt-16" style="width:140px;height:24px"></div>
+    <div class="skeleton mt-8" style="width:180px;height:16px"></div>
+    <div class="skeleton mt-24" style="width:100%;height:80px"></div>
+  </div>
+  <div id="match-stage"></div>
+  <div class="match-actions">
+    <button type="button" class="round-btn skip" id="btn-skip" aria-label="跳过">✕</button>
+    <button type="button" class="round-btn like" id="btn-like" aria-label="打招呼">♡</button>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/match-cards.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

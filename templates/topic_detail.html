@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}{{ tag.name }} · 研投圈{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('topics.square') }}">◀</a>
+  <h1 class="h1 grow">{{ tag.name }}</h1>
+  <span class="caption">关注人数 {{ followers }}</span>
+</div>
+<button type="button" class="btn btn-primary" id="sys-match" data-tag="{{ tag.id }}" style="width:100%;max-width:680px">系统匹配一位，直接开聊</button>
+
+{% if only_me %}
+<div class="empty">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.4-3 3.8-4.5 7-4.5s5.6 1.5 7 4.5"/></svg>
+  <div class="display">这个话题下现在只有你</div>
+  <button type="button" class="btn btn-ghost mt-16" id="invite-btn">邀请好友来聊</button>
+</div>
+{% else %}
+<h2 class="h2 mt-32">在这个话题里的人（{{ people|length }}）</h2>
+<div class="mt-8">
+  {% for p in people %}
+  <div class="list-row">
+    <a class="flex gap-12 center grow" href="{{ url_for('chat.page', user_id=p.user.id) }}?topic={{ tag.id }}">
+      {{ avatar(p.brief.avatar, p.user.nickname[:1]) }}
+      <div class="grow" style="min-width:0">
+        <div class="truncate">{{ p.user.nickname }}</div>
+        <div class="caption">{{ p.brief.role }} · {{ p.brief.years }}
+          {% if p.pct is not none %} · 重合度 <span class="mono" style="color:var(--accent)">{{ p.pct }}%</span>{% else %} · 重合度 —{% endif %}
+        </div>
+      </div>
+      <span class="caption"><span class="dot {% if p.online %}on{% endif %}"></span> {{ p.brief.active_text }}</span>
+    </a>
+    <a class="btn btn-ghost" href="{{ url_for('chat.page', user_id=p.user.id) }}?topic={{ tag.id }}">聊</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="h2 mt-32">相关随想（{{ related|length }}）</h2>
+{% for r in related %}
+<a class="card thought-card card-hover" href="{{ url_for('thoughts.detail', tid=r.thought.id) }}">
+  <div class="caption">{{ r.author.nickname if r.author }} · {% for t in r.tags %}#{{ t.name }} {% endfor %}</div>
+  <p class="thought-body clamp">{{ r.thought.body }}</p>
+</a>
+{% endfor %}
+{% if related %}
+<a class="caption" href="{{ url_for('thoughts.timeline') }}?tag={{ tag.id }}">查看全部</a>
+{% endif %}
+
+<div class="overlay" id="matching-modal">
+  <div class="modal">
+    <div class="match-anim">
+      {{ avatar(avatar_index, current_user.nickname[:1], 'lg') }}
+      {{ avatar(3, '?', 'lg') }}
+    </div>
+    <p class="caption" id="match-line" style="text-align:center">正在找和你最聊得来的人…</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

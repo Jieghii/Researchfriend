@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, svg_heart, svg_comment %}
+{% block title %}随想详情 · 研投圈{% endblock %}
+{% block content %}
+{% if missing %}
+<div class="empty"><div class="display">这条随想不存在或你没有权限查看</div></div>
+{% else %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('thoughts.timeline') }}">◀</a>
+  <a class="flex gap-12 center grow" href="{{ url_for('profile.user_page', uid=item.author.id) }}">
+    {{ avatar(item.author.avatar, item.author.nickname[:1]) }}
+    <div>
+      <div class="h2">{{ item.author.nickname }}</div>
+      <div class="caption">{{ item.author.role }} · {{ item.author.years }} · {{ item.rel_time }}</div>
+    </div>
+  </a>
+  {% if item.mine %}<button type="button" class="icon-btn" data-del-thought="{{ item.id }}" aria-label="删除">删除</button>{% endif %}
+</div>
+<p class="thought-body">{% for t in item.tags %}<a href="{{ url_for('topics.detail', tag_id=t.id) }}">#{{ t.name }}</a> {% endfor %}</p>
+<p class="thought-body">{{ item.body }}</p>
+<div class="flex gap-16 center mt-16">
+  <button type="button" class="like-btn {% if item.liked %}on{% endif %}" data-like="{{ item.id }}" aria-label="点赞">{{ svg_heart() }} <span data-n>{{ item.likes }}</span></button>
+</div>
+<div class="flex gap-8 wrap mt-16">
+  {% for u in likers %}
+    {{ avatar(u.avatar, u.nickname[:1], 'sm') }}
+  {% endfor %}
+  {% if like_total > 8 %}<span class="caption">等 {{ like_total }} 人</span>{% endif %}
+</div>
+<h2 class="h2 mt-32">评论</h2>
+{% if not comments %}
+<p class="caption mt-16">还没有评论，来说两句</p>
+{% endif %}
+<div class="mt-16">
+  {% for c in comments %}
+  <div class="list-row c-item">
+    {{ avatar(c.author.avatar, c.author.nickname[:1]) }}
+    <div class="grow">
+      <div class="flex between"><strong>{{ c.author.nickname }}</strong><span class="caption">{{ c.rel_time }}</span></div>
+      <p class="mt-8">{{ c.content }}</p>
+    </div>
+    {% if c.mine %}<button type="button" class="icon-btn" data-del-comment="{{ c.id }}">删除</button>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+<div class="chat-input mt-24">
+  <input class="field" id="comment-input" maxlength="300" placeholder="写评论" {% if focus %}autofocus{% endif %}>
+  <button type="button" class="btn btn-primary" id="comment-send" data-tid="{{ item.id }}">发送</button>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/thoughts.js') }}"></script>
+{% endblock %}

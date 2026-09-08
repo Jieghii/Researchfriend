@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}共同话题 · 研投圈{% endblock %}
+{% block content %}
+<h1 class="h1">共同话题</h1>
+<div class="topic-search-wrap mt-16">
+  <input class="field" id="topic-search" placeholder="搜行业或个股" autocomplete="off">
+  <div id="topic-drop" class="card topic-drop" hidden></div>
+</div>
+
+<section class="mt-32">
+  <h2 class="h2">今日热门话题</h2>
+  {% if not hot %}
+  <div class="empty">
+    <svg viewBox="0 0 24 24"><path d="M4 20h16M6 16l4-8 3 5 3-6 4 9"/></svg>
+    <div class="display">还没有人发言，去发第一条随想吧</div>
+    <button type="button" class="btn btn-primary mt-16" data-open-compose>发随想</button>
+  </div>
+  {% else %}
+  <div class="mt-8">
+    {% for item in hot %}
+    <a class="hot-row" href="{{ url_for('topics.detail', tag_id=item.tag.id) }}">
+      <span class="rank">{{ item.rank }}</span>
+      <span class="grow truncate">{{ item.tag.name }}</span>
+      <span class="caption">{{ item.followers }} 人在聊</span>
+      <span class="mono" aria-label="{% if item.arrow=='up' %}上升{% elif item.arrow=='down' %}下降{% else %}持平{% endif %}">{% if item.arrow=='up' %}↑{% elif item.arrow=='down' %}↓{% else %}─{% endif %}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="mt-32">
+  <div class="flex between center">
+    <h2 class="h2">我的话题</h2>
+    <a class="caption" href="{{ url_for('profile.me_page') }}">+ 管理</a>
+  </div>
+  <div class="flex wrap gap-8 mt-12">
+    {% for t in my_tags %}
+    <a class="pill common" href="{{ url_for('topics.detail', tag_id=t.id) }}">{{ t.name }}</a>
+    {% else %}
+    <span class="caption">还没有标签</span>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">全部话题</h2>
+  <p class="caption mt-16">热门行业</p>
+  <div class="flex wrap gap-8 mt-8">
+    {% for t in industries %}
+    <a class="pill" href="{% if t.id %}{{ url_for('topics.detail', tag_id=t.id) }}{% else %}#{% endif %}">{{ t.name }}</a>
+    {% endfor %}
+  </div>
+  <p class="caption mt-16">热门个股</p>
+  <div class="flex wrap gap-8 mt-8">
+    {% for t in stocks %}
+    <a class="pill" href="{% if t.id %}{{ url_for('topics.detail', tag_id=t.id) }}{% else %}#{% endif %}">{{ t.name }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/thoughts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

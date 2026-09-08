@@ -1,0 +1,47 @@
+<div class="overlay" id="greet-modal">
+  <div class="modal" role="dialog" aria-labelledby="greet-title">
+    <h2 class="h2" id="greet-title">打个招呼</h2>
+    <textarea class="field mt-16" id="greet-text" maxlength="100" rows="4"></textarea>
+    <div class="counter mt-8" id="greet-count">0/100</div>
+    <p class="field-error" id="greet-err"></p>
+    <div class="flex gap-12 mt-16">
+      <button type="button" class="btn btn-ghost grow" data-close="greet-modal">再想想</button>
+      <button type="button" class="btn btn-primary grow" id="greet-send">发送打招呼</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="compose-modal">
+  <div class="modal" role="dialog" aria-label="发布随想">
+    <h2 class="h2">发布随想</h2>
+    <textarea class="field mt-16" id="compose-body" maxlength="500" rows="6" placeholder="说说你的看法…"></textarea>
+    <div class="counter mt-8" id="compose-count">0/500</div>
+    <div class="flex wrap gap-8 mt-12" id="compose-tags"></div>
+    <button type="button" class="btn btn-ghost mt-12" id="pick-topic"># 话题</button>
+    <p class="caption mt-16">可见范围</p>
+    <div class="vis-grid mt-8">
+      <div class="vis-card on" data-vis="public" id="vis-public">所有人</div>
+      <div class="vis-card" data-vis="friends" id="vis-friends">好友</div>
+      <div class="vis-card" data-vis="self" id="vis-self">仅自己</div>
+    </div>
+    <p class="field-error" id="compose-err"></p>
+    <div class="flex gap-12 mt-16">
+      <button type="button" class="btn btn-ghost grow" data-close="compose-modal">取消</button>
+      <button type="button" class="btn btn-primary grow" id="compose-send" disabled>发布</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="tagpick-modal">
+  <div class="modal">
+    <h2 class="h2">选择话题</h2>
+    <div class="flex wrap gap-8 mt-16">
+      {% for t in my_tags %}
+      <button type="button" class="pill" data-pick-tag="{{ t.id }}" data-name="{{ t.name }}">#{{ t.name }}</button>
+      {% else %}
+      <p class="caption">先在「我的」里添加兴趣标签</p>
+      {% endfor %}
+    </div>
+    <button type="button" class="btn btn-ghost mt-16" data-close="tagpick-modal">完成</button>
+  </div>
+</div>

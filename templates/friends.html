@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}好友列表 · 研投圈{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">我的好友</h1>
+</div>
+<form method="get" class="mb-16">
+  <input class="field" name="q" value="{{ q or '' }}" placeholder="按昵称搜索">
+</form>
+{% if not friends %}
+<div class="empty">
+  <div class="display">还没有好友，去加好友页刷刷看</div>
+  <a class="btn btn-primary mt-16" href="{{ url_for('match.page') }}">去匹配</a>
+</div>
+{% else %}
+{% for u in friends %}
+<a class="list-row" href="{{ url_for('chat.page', user_id=u.id) }}">
+  {{ avatar(u.avatar, u.nickname[:1]) }}
+  <div class="grow">
+    <div class="truncate">{{ u.nickname }}</div>
+    <div class="caption">{{ u.role }} · {{ u.years }} · <span class="dot {% if u.online %}on{% endif %}"></span> {{ u.active_text }}</div>
+  </div>
+  <span class="btn btn-ghost">发消息</span>
+</a>
+{% endfor %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}
