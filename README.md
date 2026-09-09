@@ -44,11 +44,30 @@ python app.py
 |---|---|
 | `SECRET_KEY` | 会话 Cookie 签名密钥，本地写在 `.env` |
 | `DATABASE_URL` | 云端 Neon Postgres 连接串。本地不要设置，走 SQLite |
-| `PORT` | 本地默认 5000；Vercel 会自动注入 |
+| `PORT` | 本地默认 5000；Zeabur 会自动注入 |
 
 `.env` 已加入 `.gitignore`，不要提交到 Git。
 
-## 部署到 Vercel
+## 部署到 Zeabur（推荐，国内直连无需翻墙）
+
+`*.zeabur.app` 域名在大陆可直接访问，比 Vercel 默认域名稳定。仓库里已经放了 `Procfile` 与 `zbpack.json`，Zeabur 会自动识别为 Flask + Gunicorn。
+
+1. 在 [Neon](https://neon.tech) 准备好 Postgres 数据库，复制连接串（需含 `sslmode=require`，应用会自动补上）。
+2. 用 GitHub 账号登录 [zeabur.com](https://zeabur.com)。
+3. 控制台点 **New Project** → 选个区域（**香港**或**新加坡**延迟最低）→ 进项目后 **Deploy from GitHub** → 选择 `Jieghii/Researchfriend` 这个仓库，**Branches to deploy** 选 `main`，点 Deploy，等待构建。
+4. 进入刚部署好的服务 → **Variables**，新增：
+   - `SECRET_KEY`：一段随机长字符串（可 `python -c "import secrets;print(secrets.token_hex(32))"` 生成）
+   - `DATABASE_URL`：Neon 的 Postgres 连接串
+   - `ADMIN_PASSWORD`：管理后台密码，建议改
+   - （可选）`MAIL_SERVER` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_FROM` / `MAIL_USE_SSL`：填齐后找回密码会真发邮件
+5. 在 **Networking** 里点 **Generate Domain**，拿到一个 `*.zeabur.app` 域名，立即可访问，国内直连。
+6. 后续 push 到 `main` 分支会自动重部署。
+
+> Zeabur 免费 Starter 每月 $5 compute credits，Demo 跑这个 Flask 项目每月消耗大概 $1 以内；额度用完只暂停服务不删数据。
+
+## 部署到 Vercel（旧）
+
+> Vercel 的 `*.vercel.app` 域名在大陆被 DNS 污染，国内访问必须走 VPN。**新部署优先用 Zeabur**；如果仍需要走 Vercel 流程可参考下方。
 
 1. 把本仓库推到 GitHub。
 2. 在 [Neon](https://neon.tech) 创建 Postgres，复制连接串（需含 `sslmode=require`，应用会在缺失时自动补上）。
@@ -94,7 +113,7 @@ Flask + SQLAlchemy + Jinja2 + 原生 CSS/JS。聊天每 3 秒轮询增量消息�
 - 入口：`/admin`，密码来自环境变量 `ADMIN_PASSWORD`
 - 功能：总览统计、用户管理（搜索 / 封禁 / 删除）、反馈处理、邀请码生成与停用
 
-## 环境变量（Vercel）
+## 环境变量（Zeabur / Vercel）
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
@@ -111,6 +130,6 @@ Flask + SQLAlchemy + Jinja2 + 原生 CSS/JS。聊天每 3 秒轮询增量消息�
 如需真的发邮件，以 QQ 邮箱为例：
 1. 登录 QQ 邮箱网页版 → 设置 → 账号 → 开启 **IMAP/SMTP 服务**
 2. 按提示生成**授权码**（不是你的 QQ 登录密码）
-3. 在 Vercel 环境变量里填：`MAIL_SERVER=smtp.qq.com`、`MAIL_PORT=465`、`MAIL_USERNAME=你的QQ邮箱`、`MAIL_PASSWORD=授权码`、`MAIL_FROM=你的QQ邮箱`、`MAIL_USE_SSL=1`
+3. 在 Zeabur（Vercel 同理）环境变量里填：`MAIL_SERVER=smtp.qq.com`、`MAIL_PORT=465`、`MAIL_USERNAME=你的QQ邮箱`、`MAIL_PASSWORD=授权码`、`MAIL_FROM=你的QQ邮箱`、`MAIL_USE_SSL=1`
 
 代码不需要任何改动。

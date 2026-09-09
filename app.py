@@ -111,4 +111,6 @@ if __name__ == "__main__":
     import os
 
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # 生产环境（含 DATABASE_URL）默认关闭 debug；本地开发可设 FLASK_ENV=development 打开
+    debug = os.environ.get("FLASK_ENV") == "development" and not os.environ.get("DATABASE_URL")
+    app.run(host="0.0.0.0", port=port, debug=debug)
