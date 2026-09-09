@@ -43,10 +43,15 @@
     });
   }
 
-  // 卖家点击评价按钮
+  // 卖家点击评价 / 新增团队按钮
   qsa("[data-seller-deny]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       showToast("仅买方用户可以评价");
+    });
+  });
+  qsa("[data-seller-deny-add]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      showToast("仅买方用户可以新增团队评分");
     });
   });
 
@@ -112,4 +117,50 @@
       });
     });
   });
+
+  // ===== 玻璃球首页：新增团队评分弹窗 =====
+  var openAdd = qs("[data-open-add-team]");
+  if (openAdd) openAdd.addEventListener("click", function () { openModal("add-team-modal"); });
+  qsa("[data-close-add-team]").forEach(function (b) {
+    b.addEventListener("click", function () { closeModal("add-team-modal"); });
+  });
+
+  var submitAdd = qs("[data-submit-add-team]");
+  if (submitAdd) {
+    submitAdd.addEventListener("click", function () {
+      var brokerageInput = qs("#new-brokerage-name");
+      var teamInput = qs("#new-team-name");
+      var brokerageName = (brokerageInput.value || "").trim();
+      var teamName = (teamInput.value || "").trim();
+      if (!brokerageName) { showToast("请填写券商名称"); return; }
+      if (!teamName) { showToast("请填写团队名称"); return; }
+      var payload = {};
+      var ok = true;
+      qsa("#add-team-modal .star-picker").forEach(function (p) {
+        var v = parseInt(p.getAttribute("data-value") || "0", 10);
+        if (!v) ok = false;
+        payload[p.getAttribute("data-dim")] = v;
+      });
+      if (!ok) { showToast("三个维度都要打分哦"); return; }
+      payload.brokerage_name = brokerageName;
+      payload.team_name = teamName;
+      submitAdd.disabled = true;
+      api("/api/glass/team/create", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }).then(function (r) {
+        submitAdd.disabled = false;
+        if (r.ok && r.redirect) {
+          closeModal("add-team-modal");
+          showToast("团队已加入，可以继续评价", "success");
+          setTimeout(function () { location.href = r.redirect; }, 500);
+        } else {
+          showToast(r.error || "提交失败", "error");
+        }
+      }).catch(function () {
+        submitAdd.disabled = false;
+        showToast("提交失败，请重试", "error");
+      });
+    });
+  }
 })();

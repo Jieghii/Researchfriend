@@ -13,9 +13,11 @@ from services import (
     excluded_user_ids,
     get_or_create_conversation,
     is_online,
+    likes_and_comments_for,
     overlap_pct,
     recompute_hot_ranks,
     relative_active,
+    serialize_thought,
     tag_ids_of,
     tags_for_thoughts,
     tags_map_for_users,
@@ -99,26 +101,33 @@ def detail(tag_id):
             }
         )
     people.sort(key=lambda x: (not x["online"], not x["has_common"], -(x["pct"] or -1)))
-    related_q = (
+
+    # 相关随想：用 serialize_thought 打包，让前端 thought_card 宏能直接渲染
+    related_items = (
         thought_visible_query(me)
         .join(ThoughtTag, ThoughtTag.thought_id == Thought.id)
         .filter(ThoughtTag.tag_id == tag_id, Thought.visibility == "public")
         .order_by(Thought.created_at.desc())
         .limit(3)
+        .all()
     )
-    related = related_q.all()
-    authors = {u.id: u for u in User.query.filter(User.id.in_({t.author_id for t in related} or {0})).all()}
-    ttags = tags_for_thoughts([t.id for t in related])
-    related_view = [
-        {"thought": th, "author": authors.get(th.author_id), "tags": ttags.get(th.id, [])} for th in related
-    ]
-    only_me = followers <= 1 and (UserTag.query.filter_by(user_id=me.id, tag_id=tag_id).first() is not None or followers == 0)
-    if followers == 0:
-        only_me = True
-    elif UserTag.query.filter(UserTag.tag_id == tag_id, UserTag.user_id != me.id).count() == 0:
-        only_me = True
-    else:
-        only_me = False
+    related_view = []
+    if related_items:
+        author_ids = {t.author_id for t in related_items}
+        authors = {u.id: u for u in User.query.filter(User.id.in_(author_ids or {0})).all()}
+        rtags = tags_for_thoughts([t.id for t in related_items])
+        rlikes, rliked, rcomments = likes_and_comments_for([t.id for t in related_items], me.id)
+        related_view = [
+            serialize_thought(
+                th, me, rtags, rlikes, rliked,
+                authors[th.author_id], rcomments.get(th.id, 0),
+            )
+            for th in related_items
+        ]
+
+    only_me = (
+        UserTag.query.filter(UserTag.tag_id == tag_id, UserTag.user_id != me.id).count() == 0
+    )
     return render_template(
         "topic_detail.html",
         nav="topics",

@@ -115,6 +115,7 @@ def index():
         top_brokerages=b_list[:3],
         top_teams=t_list[:3],
         cards=cards,
+        brokerages=brokerages,
         dimensions=DIMENSIONS,
     )
 
@@ -212,6 +213,75 @@ def rate_team(team_id):
     rec.capital = vals["capital"]
     db.session.commit()
     return jsonify({"ok": True, "score": team_score(team_id)})
+
+
+@bp.route("/api/glass/team/create", methods=["POST"])
+def create_team():
+    """买方用户自荐新增团队：填写券商名 + 团队名 + 三维评分。
+
+    - 券商按名称查重；不存在则自动创建（hue 由名称 hash 得到，简介为占位文案）
+    - 同券商下同名的团队视为同一团队，复用并更新本用户的评分
+    - 创建/更新成功后跳转团队详情页
+    """
+    me = current_user()
+    if me.role != "buyer":
+        return jsonify({"ok": False, "error": "仅买方用户可以新增团队评分"}), 403
+    data = request.get_json(force=True, silent=True) or {}
+    brokerage_name = (data.get("brokerage_name") or "").strip()
+    team_name = (data.get("team_name") or "").strip()
+    if not brokerage_name or not team_name:
+        return jsonify({"ok": False, "error": "请填写券商名称和团队名称"}), 400
+    if len(brokerage_name) > 32 or len(team_name) > 32:
+        return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
+    vals = {}
+    for key, _label in DIMENSIONS:
+        try:
+            v = int(data.get(key) or 0)
+        except (TypeError, ValueError):
+            v = 0
+        if v < 1 or v > 5:
+            return jsonify({"ok": False, "error": "每个维度都要打 1-5 星"}), 400
+        vals[key] = v
+    b = Brokerage.query.filter_by(name=brokerage_name).first()
+    if not b:
+        hue = sum(ord(c) for c in brokerage_name) % 360
+        b = Brokerage(
+            name=brokerage_name,
+            short_name=brokerage_name[:2],
+            intro="由用户贡献的虚拟券商",
+            hue=hue,
+        )
+        db.session.add(b)
+        db.session.flush()
+    team = ResearchTeam.query.filter_by(brokerage_id=b.id, name=team_name).first()
+    if not team:
+        team = ResearchTeam(
+            brokerage_id=b.id,
+            name=team_name,
+            intro="由用户贡献的虚拟团队",
+        )
+        db.session.add(team)
+        db.session.flush()
+    rec = TeamRating.query.filter_by(team_id=team.id, user_id=me.id).first()
+    if rec:
+        rec.research = vals["research"]
+        rec.service = vals["service"]
+        rec.capital = vals["capital"]
+    else:
+        db.session.add(TeamRating(
+            team_id=team.id,
+            user_id=me.id,
+            research=vals["research"],
+            service=vals["service"],
+            capital=vals["capital"],
+        ))
+    db.session.commit()
+    return jsonify({
+        "ok": True,
+        "team_id": team.id,
+        "brokerage_id": b.id,
+        "redirect": url_for("glass.team_detail", team_id=team.id),
+    })
 
 
 @bp.route("/api/glass/review", methods=["POST"])

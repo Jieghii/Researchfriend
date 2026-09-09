@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar %}
+{% from "macros.html" import avatar, thought_card %}
 {% block title %}{{ tag.name }} · 研友{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -38,10 +38,7 @@
 
 <h2 class="h2 mt-32">相关随想（{{ related|length }}）</h2>
 {% for r in related %}
-<a class="card thought-card card-hover" href="{{ url_for('thoughts.detail', tid=r.thought.id) }}">
-  <div class="caption">{{ r.author.nickname if r.author }} · {% for t in r.tags %}#{{ t.name }} {% endfor %}</div>
-  <p class="thought-body clamp">{{ r.thought.body }}</p>
-</a>
+  {{ thought_card(r) }}
 {% endfor %}
 {% if related %}
 <a class="caption" href="{{ url_for('thoughts.timeline') }}?tag={{ tag.id }}">查看全部</a>

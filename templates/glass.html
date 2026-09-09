@@ -2,8 +2,21 @@
 {% from "macros.html" import stars %}
 {% block title %}玻璃球点评 · 研友{% endblock %}
 {% block content %}
-<h1 class="h1">玻璃球点评</h1>
-<p class="caption mt-8">券商与研究团队评分榜。评分为研究能力 / 服务能力 / 钞能力三维均值，券商得分由其团队得分平均而来。</p>
+<div class="flex between center wrap" style="gap:12px">
+  <div>
+    <h1 class="h1">玻璃球点评</h1>
+    <p class="caption mt-8">券商与研究团队评分榜。评分为研究能力 / 服务能力 / 钞能力三维均值，券商得分由其团队得分平均而来。</p>
+  </div>
+  {% if current_user %}
+    {% if current_user.role == 'buyer' %}
+    <button type="button" class="btn btn-primary" data-open-add-team>+ 新增团队评分</button>
+    {% else %}
+    <button type="button" class="btn btn-ghost" data-seller-deny-add>+ 新增团队评分</button>
+    {% endif %}
+  {% else %}
+  <a class="btn btn-ghost" href="{{ url_for('auth.login') }}">登录后新增团队</a>
+  {% endif %}
+</div>
 
 <div class="rank-duo mt-24">
   <section class="card" style="padding:20px">
@@ -80,4 +93,43 @@
 </section>
 
 <p class="disclaimer mt-32">以上券商与团队均为虚构，评分与评价均为演示用虚拟数据，不代表任何真实机构。</p>
+
+<div class="overlay" id="add-team-modal">
+  <div class="modal">
+    <h2 class="h2">新增团队评分</h2>
+    <p class="caption mt-8">填券商名称 + 团队名称，并对三个维度都打 1-5 星，才能提交。如果券商还不存在，会自动建一个。</p>
+    <div class="mt-16">
+      <label class="caption" for="new-brokerage-name">券商名称</label>
+      <input class="field mt-8" id="new-brokerage-name" list="brokerage-list" maxlength="32" autocomplete="off" placeholder="如：中信证券" />
+      <datalist id="brokerage-list">
+        {% for b in brokerages %}
+        <option value="{{ b.name }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+    <div class="mt-16">
+      <label class="caption" for="new-team-name">团队名称</label>
+      <input class="field mt-8" id="new-team-name" maxlength="32" autocomplete="off" placeholder="如：消费组" />
+    </div>
+    <div class="rate-rows mt-16">
+      {% for key, label in dimensions %}
+      <div class="rate-row">
+        <span class="caption rate-label">{{ label }}</span>
+        <span class="star-picker" data-dim="{{ key }}">
+          {% for i in range(1, 6) %}
+          <button type="button" class="star-btn" data-star="{{ i }}" aria-label="{{ label }} {{ i }} 星">★</button>
+          {% endfor %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="flex gap-12 mt-16">
+      <button type="button" class="btn btn-ghost grow" data-close-add-team>取消</button>
+      <button type="button" class="btn btn-primary grow" data-submit-add-team>提交</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/glass.js') }}"></script>
 {% endblock %}
