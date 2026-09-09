@@ -1,11 +1,16 @@
 """研友 Demo。本项目为演示用途，不做真实身份认证，不得用于生产环境。"""
 from flask import Flask, redirect, request, session, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
 from extensions import db
 from schema import ensure_columns
 
 app = Flask(__name__)
+# 让 Flask 信任 Nginx 传过来的 X-Forwarded-Proto / X-Forwarded-For 等头
+# 这样以后接 HTTPS 时，url_for / redirect 会自动生成 https:// 链接
+# X-Forwarded-Proto 计数为 1 表示只有一层代理（Nginx）
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.config.from_object(Config)
 db.init_app(app)
 

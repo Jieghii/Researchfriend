@@ -53,7 +53,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    # 生产环境（有 DATABASE_URL，即 HTTPS）下强制 Secure Cookie
-    SESSION_COOKIE_SECURE = bool(os.environ.get("DATABASE_URL"))
+    # Secure Cookie 只在 HTTPS 环境下生效。仅当显式设置 PROXIED_HTTPS=1 才打开。
+    # 默认 False 是为了 HTTP 部署也能登录；以后接域名 + 配置 Nginx HTTPS 后
+    # 在环境变量里加 PROXIED_HTTPS=1 即可自动启用。
+    SESSION_COOKIE_SECURE = os.environ.get("PROXIED_HTTPS") == "1"
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 12
     # 演示用途：不做真实身份认证，不得直接用于生产环境。
