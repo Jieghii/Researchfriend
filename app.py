@@ -1,8 +1,9 @@
-"""研投圈 Demo。本项目为演示用途，不做真实身份认证，不得用于生产环境。"""
+"""研友 Demo。本项目为演示用途，不做真实身份认证，不得用于生产环境。"""
 from flask import Flask, redirect, request, session, url_for
 
 from config import Config
 from extensions import db
+from schema import ensure_columns
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -10,21 +11,36 @@ db.init_app(app)
 
 from routes import register_blueprints  # noqa: E402
 from routes.auth import current_user  # noqa: E402
+from schema import ensure_columns  # noqa: E402
 from services import avatar_index, PRESET_INDUSTRIES, PRESET_STOCKS  # noqa: E402
-from seed import seed_if_empty  # noqa: E402
+from seed import ensure_assets, seed_if_empty  # noqa: E402
 
 register_blueprints(app)
 app.jinja_env.globals["avatar_of"] = avatar_index
+app.jinja_env.globals["SITE_NAME"] = "研友"
+app.jinja_env.globals["DISCLAIMER"] = (
+    "本网站仅作为 Demo 演示使用，站内所有内容均为虚拟内容，非真实信息，不构成任何投资建议"
+)
 
-OPEN_ENDPOINTS = {"auth.login", "static"}
+# 不需要登录即可访问：登录 / 注册 / 找回密码 / 重置密码
+OPEN_ENDPOINTS = {
+    "auth.login",
+    "auth.register",
+    "auth.forgot_password",
+    "auth.reset_password",
+    "static",
+}
 
 
 @app.before_request
 def gate():
     if request.endpoint == "static" or (request.path or "").startswith("/static"):
         return None
+    # 管理后台走自己的密码鉴权
+    if (request.endpoint or "").startswith("admin.") or (request.path or "").startswith("/admin"):
+        return None
     user = current_user()
-    if request.endpoint in ("auth.login",):
+    if request.endpoint in OPEN_ENDPOINTS:
         return None
     if not user:
         if request.path.startswith("/api/"):
@@ -66,7 +82,9 @@ def home():
 
 with app.app_context():
     db.create_all()
+    ensure_columns(app, db)
     seed_if_empty()
+    ensure_assets()
 
 
 if __name__ == "__main__":

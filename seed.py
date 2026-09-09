@@ -261,3 +261,184 @@ def seed_if_empty():
     )
 
     db.session.commit()
+
+
+# ==========================================================
+# 玻璃球点评与邀请码资产（独立于用户种子数据，可随时补齐）
+# ==========================================================
+
+BROKERAGES = [
+    {"name": "华兴证券", "short": "华兴", "hue": 20, "intro": "虚构机构。综合研究实力较强，消费与电子覆盖齐全。",
+     "teams": ["食品饮料组", "电子组", "电新组", "医药组"]},
+    {"name": "中诚证券", "short": "中诚", "hue": 48, "intro": "虚构机构。宏观策略见长，周期与金融地产覆盖扎实。",
+     "teams": ["宏观策略组", "食品饮料组", "银行地产组"]},
+    {"name": "泰和证券", "short": "泰和", "hue": 96, "intro": "虚构机构。制造业研究有特色，电新与军工跟踪紧密。",
+     "teams": ["电子组", "电新组", "军工组"]},
+    {"name": "弘远证券", "short": "弘远", "hue": 150, "intro": "虚构机构。医药与互联网研究投入大，路演响应快。",
+     "teams": ["医药组", "消费组", "互联网组"]},
+    {"name": "嘉信研究", "short": "嘉信", "hue": 190, "intro": "虚构机构。新能源与策略配置研究为主。",
+     "teams": ["电新组", "新能源车组", "策略组"]},
+    {"name": "鼎新证券", "short": "鼎新", "hue": 230, "intro": "虚构机构。半导体产业链跟踪细，专家资源丰富。",
+     "teams": ["电子组", "半导体组", "通信组"]},
+    {"name": "睿信证券", "short": "睿信", "hue": 275, "intro": "虚构机构。必选消费与家电研究稳健。",
+     "teams": ["食品饮料组", "农业组", "家电组"]},
+    {"name": "长明证券", "short": "长明", "hue": 320, "intro": "虚构机构。医药与军工研究积累深。",
+     "teams": ["医药组", "军工组", "电新组"]},
+]
+
+REVIEW_TEXTS = [
+    "深度报告质量不错，数据颗粒度细，但路演排期偏紧，临时约不太上。",
+    "首席对产业节奏把握准，观点敢说，不做骑墙派。",
+    "服务响应快，晚上十点还能回消息，这点很加分。",
+    "派点性价比一般，服务做得很满但研究的增量信息不多。",
+    "模型拆得很细，会给到底层假设，方便我们自己改参数。",
+    "调研资源不错，能约到产业链关键人物，这点很难得。",
+    "报告偏乐观，风险提示写得比较模板化，需要自己打折看。",
+    "对政策变化的反应速度快，第一时间出解读。",
+    "团队稳定性一般，人换得比较勤，跟踪连续性受影响。",
+    "财务模型扎实，但对估值的讨论偏少。",
+    "沟通顺畅，观点有变化时主动同步，不是只发报告。",
+    "覆盖面广但深度参差，首席本人和助理的产出差距明显。",
+    "对渠道和终端的跟踪做得细，草根数据有价值。",
+    "响应速度取决于是不是重点客户，这点比较现实。",
+    "研究独立性还可以，不太受投行项目影响。",
+    "报告结论清晰，但推演过程略粗糙，需要自己补逻辑。",
+]
+
+
+def ensure_assets():
+    """补齐玻璃球点评数据与邀请码。可重复执行，已有数据则跳过。"""
+    import random
+
+    from codes import gen_invite_code
+    from models import (
+        Brokerage,
+        Feedback,
+        InviteCode,
+        ResearchTeam,
+        Review,
+        ReviewVote,
+        TeamRating,
+    )
+
+    # 1) 玻璃球点评：券商与团队
+    if Brokerage.query.count() == 0:
+        rng = random.Random(20260909)
+        for b in BROKERAGES:
+            broker = Brokerage(name=b["name"], short_name=b["short"], intro=b["intro"], hue=b["hue"])
+            db.session.add(broker)
+            db.session.flush()
+            for tname in b["teams"]:
+                db.session.add(
+                    ResearchTeam(
+                        brokerage_id=broker.id,
+                        name=tname,
+                        intro=f"{b['name']}{tname}，虚构团队，仅用于演示。",
+                    )
+                )
+        db.session.commit()
+
+    # 2) 买方用户给团队打分（1-5 星）
+    if TeamRating.query.count() == 0:
+        rng = random.Random(4242)
+        buyers = User.query.filter_by(role="buyer").all()
+        teams = ResearchTeam.query.all()
+        if buyers and teams:
+            for team in teams:
+                # 每个团队 3-6 位买方打分
+                n = min(len(buyers), rng.randint(3, 6))
+                for u in rng.sample(buyers, n):
+                    base = rng.uniform(2.6, 4.9)
+                    db.session.add(
+                        TeamRating(
+                            team_id=team.id,
+                            user_id=u.id,
+                            research=max(1, min(5, round(base + rng.uniform(-0.4, 0.5)))),
+                            service=max(1, min(5, round(base + rng.uniform(-0.7, 0.6)))),
+                            capital=max(1, min(5, round(base + rng.uniform(-1.0, 0.8)))),
+                        )
+                    )
+            db.session.commit()
+
+    # 3) 匿名评价
+    if Review.query.count() == 0:
+        rng = random.Random(777)
+        buyers = User.query.filter_by(role="buyer").all()
+        all_users = User.query.all()
+        brokerages = Brokerage.query.all()
+        teams = ResearchTeam.query.all()
+        texts = list(REVIEW_TEXTS)
+        rng.shuffle(texts)
+        idx = 0
+        # 券商评价：每家 1-2 条
+        for b in brokerages:
+            for _ in range(rng.randint(1, 2)):
+                author = rng.choice(buyers) if buyers else None
+                if not author:
+                    break
+                rec = Review(
+                    target_type="brokerage",
+                    target_id=b.id,
+                    author_id=author.id,
+                    content=texts[idx % len(texts)],
+                )
+                idx += 1
+                db.session.add(rec)
+        # 团队评价：每个团队 0-2 条
+        for t in teams:
+            for _ in range(rng.randint(0, 2)):
+                author = rng.choice(buyers) if buyers else None
+                if not author:
+                    break
+                rec = Review(
+                    target_type="team",
+                    target_id=t.id,
+                    author_id=author.id,
+                    content=texts[idx % len(texts)],
+                )
+                idx += 1
+                db.session.add(rec)
+        db.session.commit()
+
+        # 给部分评价随机点赞 / 点踩
+        reviews = Review.query.all()
+        for r in reviews:
+            for u in rng.sample(all_users, min(len(all_users), rng.randint(1, 5))):
+                if u.id == r.author_id:
+                    continue
+                db.session.add(
+                    ReviewVote(review_id=r.id, user_id=u.id, value=1 if rng.random() < 0.75 else -1)
+                )
+        db.session.commit()
+
+    # 4) 邀请码：系统初始码 + 给没有码的用户补一张
+    if InviteCode.query.count() == 0:
+        for i in range(5):
+            db.session.add(
+                InviteCode(
+                    code=gen_invite_code(exists=lambda c: InviteCode.query.filter_by(code=c).first()),
+                    owner_user_id=None,
+                    max_uses=5,
+                    note="系统初始邀请码",
+                )
+            )
+        db.session.commit()
+
+    for u in User.query.all():
+        if not InviteCode.query.filter_by(owner_user_id=u.id).first():
+            db.session.add(
+                InviteCode(
+                    code=gen_invite_code(exists=lambda c: InviteCode.query.filter_by(code=c).first()),
+                    owner_user_id=u.id,
+                    max_uses=5,
+                )
+            )
+    db.session.commit()
+
+    # 5) 两条示例反馈
+    if Feedback.query.count() == 0:
+        demo_user = User.query.filter_by(nickname="林知微").first()
+        if demo_user:
+            db.session.add(Feedback(user_id=demo_user.id, content="希望随想能支持图片，看观点更直观。", status="open"))
+            db.session.add(Feedback(user_id=demo_user.id, content="话题搜索能不能支持拼音首字母？打字慢。", status="resolved", admin_note="已记录，后续版本评估。"))
+            db.session.commit()

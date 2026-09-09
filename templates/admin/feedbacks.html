@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block title %}用户反馈 · 研友管理后台{% endblock %}
+{% block content %}
+<h1 class="h1">用户反馈</h1>
+<div class="flex gap-8 mt-16">
+  <a class="pill {% if status=='all' %}common{% endif %}" href="{{ url_for('admin.feedbacks', status='all') }}">全部</a>
+  <a class="pill {% if status=='open' %}common{% endif %}" href="{{ url_for('admin.feedbacks', status='open') }}">待处理</a>
+  <a class="pill {% if status=='resolved' %}common{% endif %}" href="{{ url_for('admin.feedbacks', status='resolved') }}">已处理</a>
+</div>
+
+<div class="mt-16">
+  {% for r in rows %}
+  <div class="card" style="padding:16px" data-fb="{{ r.id }}">
+    <div class="flex between center">
+      <strong>{{ r.nickname }}</strong>
+      <span class="caption">{{ r.at }}</span>
+    </div>
+    <p class="mt-8">{{ r.content }}</p>
+    {% if r.contact %}<p class="caption mt-8">联系方式：{{ r.contact }}</p>{% endif %}
+    {% if r.admin_note %}<p class="caption mt-8">已回复：{{ r.admin_note }}</p>{% endif %}
+    <div class="flex gap-8 mt-12">
+      <input class="field" data-note="{{ r.id }}" placeholder="回复（可选）" value="{{ r.admin_note or '' }}">
+      <button type="button" class="btn btn-primary" data-resolve="{{ r.id }}">{{ '重新打开' if r.status=='resolved' else '标记已处理' }}</button>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty"><div class="display">没有反馈</div></div>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+qsa("[data-resolve]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var id = btn.getAttribute("data-resolve");
+    var card = qs('[data-fb="' + id + '"]');
+    var noteInput = qs('[data-note="' + id + '"]', card);
+    var isResolved = btn.textContent.indexOf("重新打开") >= 0;
+    api("/admin/feedbacks/" + id + "/resolve", {
+      method: "POST",
+      body: JSON.stringify({ status: isResolved ? "open" : "resolved", note: noteInput.value || "" }),
+    }).then(function (r) {
+      if (r.ok) { showToast("已更新", "success"); setTimeout(function(){location.reload();}, 600); }
+      else showToast("更新失败", "error");
+    });
+  });
+});
+</script>
+{% endblock %}

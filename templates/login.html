@@ -1,21 +1,37 @@
 {% extends "base.html" %}
-{% block title %}登录 · 研投圈{% endblock %}
+{% block title %}登录 · 研友{% endblock %}
 {% block guest %}
 <div class="login-wrap">
   <div class="card login-card">
-    <h1 class="display">研投圈</h1>
+    <h1 class="display">研友</h1>
     <p class="caption mt-8">按研究重合度，找到能聊到一起的人</p>
     <form method="post" id="login-form" class="mt-32">
-      <input class="field" id="nickname" name="nickname" maxlength="16" placeholder="给自己起个圈内昵称" value="{{ form.nickname if form else '' }}" autocomplete="username">
+      <input class="field" id="nickname" name="nickname" maxlength="16" placeholder="你的昵称" value="{{ form.nickname if form else '' }}" autocomplete="username">
       <div class="pw-wrap mt-16">
-        <input class="field" id="password" name="password" type="password" placeholder="设置 / 输入密码" autocomplete="current-password">
+        <input class="field" id="password" name="password" type="password" placeholder="密码" autocomplete="current-password">
         <button type="button" class="pw-toggle" id="pw-toggle" aria-label="显示密码">显</button>
       </div>
       {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
-      <button type="submit" class="btn btn-primary mt-24" id="login-btn" style="width:100%">进入研投圈</button>
+      <button type="submit" class="btn btn-primary mt-24" id="login-btn" style="width:100%">登录</button>
     </form>
-    <p class="caption mt-16" style="text-align:center">还没有账号？点这里注册</p>
-    <p class="disclaimer">本站为演示项目，请勿填写真实个人信息与真实密码</p>
+
+    {% if mode == 'no_user' %}
+    <div class="mt-16" style="text-align:center">
+      <a class="btn btn-ghost" href="{{ url_for('auth.register') }}" style="width:100%">去注册一个账号</a>
+    </div>
+    {% elif mode == 'bad_pw' %}
+    <p class="caption mt-16" style="text-align:center">
+      <a href="{{ url_for('auth.forgot_password') }}">忘记密码？通过邮箱找回</a>
+    </p>
+    {% endif %}
+
+    <p class="caption mt-24" style="text-align:center">
+      还没有账号？<a href="{{ url_for('auth.register') }}">点这里注册</a>
+    </p>
+    <p class="caption mt-8" style="text-align:center">
+      <a href="{{ url_for('auth.forgot_password') }}">忘记密码</a>
+    </p>
+    <p class="disclaimer">本站为 Demo 演示项目，所有内容均为虚拟数据，请勿填写真实个人信息与常用密码</p>
   </div>
 </div>
 {% endblock %}

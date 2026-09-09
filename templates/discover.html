@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "macros.html" import svg_hash, svg_users, svg_glass, svg_pen, svg_gift %}
+{% block title %}发现 · 研友{% endblock %}
+{% block content %}
+<h1 class="h1">发现</h1>
+<p class="caption mt-8">话题、通讯录、机构点评、反馈与邀请码都在这里</p>
+
+<div class="discover-grid mt-24">
+  {% for e in entries %}
+  <a class="card discover-card card-hover" href="{{ e.href }}">
+    <div class="discover-icon">
+      {% if e.icon == 'hash' %}{{ svg_hash() }}
+      {% elif e.icon == 'user' %}{{ svg_users() }}
+      {% elif e.icon == 'glass' %}{{ svg_glass() }}
+      {% elif e.icon == 'pen' %}{{ svg_pen() }}
+      {% elif e.icon == 'gift' %}{{ svg_gift() }}
+      {% endif %}
+    </div>
+    <div class="grow" style="min-width:0">
+      <strong>{{ e.title }}</strong>
+      <p class="caption mt-8">{{ e.desc }}</p>
+      {% if e.extra %}<p class="caption mt-8 mono">{{ e.extra }}</p>{% endif %}
+    </div>
+    <span class="chev" aria-hidden="true">›</span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

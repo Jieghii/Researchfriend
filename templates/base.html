@@ -1,10 +1,10 @@
-{% from "macros.html" import svg_user, svg_hash, svg_chat, svg_pen, svg_me, avatar %}
+{% from "macros.html" import svg_user, svg_hash, svg_chat, svg_pen, svg_me, svg_compass, avatar %}
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}研投圈{% endblock %}</title>
+  <title>{% block title %}研友{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@500&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600&display=swap" rel="stylesheet">
@@ -12,6 +12,7 @@
   <script src="{{ url_for('static', filename='js/theme-boot.js') }}"></script>
 </head>
 <body>
+  <div class="site-banner" role="note">{{ DISCLAIMER }}</div>
   <div id="toast" class="toast" role="status"></div>
   {% if current_user %}
   <div class="app-shell">
@@ -25,7 +26,7 @@
       </div>
       <nav class="nav-list">
         <a class="nav-item {% if nav=='match' %}active{% endif %}" href="{{ url_for('match.page') }}">{{ svg_user() }} 加好友</a>
-        <a class="nav-item {% if nav=='topics' %}active{% endif %}" href="{{ url_for('topics.square') }}">{{ svg_hash() }} 共同话题</a>
+        <a class="nav-item {% if nav=='discover' %}active{% endif %}" href="{{ url_for('discover.page') }}">{{ svg_compass() }} 发现</a>
         <a class="nav-item {% if nav=='chat' %}active{% endif %}" href="{{ url_for('chat.inbox') }}">{{ svg_chat() }} 聊天</a>
         <a class="nav-item {% if nav=='thoughts' %}active{% endif %}" href="{{ url_for('thoughts.timeline') }}">{{ svg_pen() }} 随想</a>
         <a class="nav-item {% if nav=='me' %}active{% endif %}" href="{{ url_for('profile.me_page') }}">{{ svg_me() }} 我的{% if pending_count %}<span class="badge">{{ pending_count }}</span>{% endif %}</a>
@@ -43,7 +44,7 @@
   </div>
   <nav class="mobile-tab" aria-label="主导航">
     <a class="{% if nav=='match' %}active{% endif %}" href="{{ url_for('match.page') }}">{{ svg_user() }}加好友</a>
-    <a class="{% if nav=='topics' %}active{% endif %}" href="{{ url_for('topics.square') }}">{{ svg_hash() }}话题</a>
+    <a class="{% if nav=='discover' %}active{% endif %}" href="{{ url_for('discover.page') }}">{{ svg_compass() }}发现</a>
     <a class="{% if nav=='chat' %}active{% endif %}" href="{{ url_for('chat.inbox') }}">{{ svg_chat() }}聊天</a>
     <a class="{% if nav=='thoughts' %}active{% endif %}" href="{{ url_for('thoughts.timeline') }}">{{ svg_pen() }}随想</a>
     <a class="{% if nav=='me' %}active{% endif %}" href="{{ url_for('profile.me_page') }}">{{ svg_me() }}我的</a>

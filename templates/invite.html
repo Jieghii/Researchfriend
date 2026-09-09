@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}邀请码 · 研友{% endblock %}
+{% block content %}
+<h1 class="h1">邀请码</h1>
+
+<section class="card mt-16" style="padding:24px">
+  <h2 class="h2">我的邀请码</h2>
+  <div class="my-code mt-16">
+    <code id="my-code-text">{{ my_code.code }}</code>
+    <button type="button" class="btn btn-ghost" id="copy-code">复制</button>
+  </div>
+  <p class="caption mt-12">
+    每人的邀请码最多可邀请 <b>{{ my_code.max_uses }}</b> 人，
+    已使用 <b>{{ used }}</b> 个名额，剩余 <b>{{ left }}</b> 个。
+  </p>
+
+  <h3 class="h2 mt-24">使用情况</h3>
+  <ul class="invite-slots mt-12">
+    {% for s in slots %}
+    <li class="{% if s.used %}used{% endif %}">
+      <span class="slot-idx">{{ loop.index }}</span>
+      {% if s.used %}
+      <span class="grow">已被使用</span>
+      <span class="mono">{{ s.nickname }}</span>
+      {% else %}
+      <span class="grow caption">空闲名额</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="caption mt-12">邀请码使用后，会在这里标注对应受邀请注册的用户的昵称。</p>
+</section>
+
+<section class="card mt-16" style="padding:24px">
+  <h2 class="h2">我是谁邀请来的</h2>
+  {% if invited_by %}
+  <p class="mt-12">你通过邀请码 <b class="mono">{{ invited_by.code }}</b> 注册</p>
+  <p class="caption mt-8">邀请人：<b>{{ invited_by.owner }}</b></p>
+  {% else %}
+  <p class="caption mt-12">你的账号没有记录邀请来源（一般是管理员直接生成的账号）。</p>
+  {% endif %}
+</section>
+
+<p class="disclaimer mt-24">邀请码仅限本人使用，请勿公开传播。本网站为 Demo 演示项目。</p>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var btn = document.getElementById("copy-code");
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    var text = (document.getElementById("my-code-text") || {}).textContent || "";
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () { showToast("邀请码已复制", "success"); });
+    } else {
+      showToast("请手动复制");
+    }
+  });
+})();
+</script>
+{% endblock %}

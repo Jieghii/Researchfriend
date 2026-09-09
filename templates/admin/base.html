@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}研友 · 管理后台{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('static', filename='js/theme-boot.js') }}"></script>
+</head>
+<body>
+  <div class="site-banner" role="note">{{ DISCLAIMER }}</div>
+  <div id="toast" class="toast" role="status"></div>
+  {% if session.get('admin_ok') %}
+  <div class="admin-shell">
+    <aside class="sidebar">
+      <div class="sidebar-user">
+        <div class="meta"><div class="name">管理后台</div><span class="role-chip">研友 Admin</span></div>
+      </div>
+      <nav class="nav-list">
+        <a class="nav-item {% if request.endpoint=='admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">总览</a>
+        <a class="nav-item {% if request.endpoint=='admin.users' %}active{% endif %}" href="{{ url_for('admin.users') }}">用户管理</a>
+        <a class="nav-item {% if request.endpoint=='admin.feedbacks' %}active{% endif %}" href="{{ url_for('admin.feedbacks') }}">用户反馈</a>
+        <a class="nav-item {% if request.endpoint=='admin.invites' %}active{% endif %}" href="{{ url_for('admin.invites') }}">邀请码</a>
+      </nav>
+      <div class="theme-switch">
+        <a class="caption" href="{{ url_for('admin.logout') }}">退出后台</a>
+      </div>
+    </aside>
+    <main class="content">
+      <div class="content-inner">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  {% else %}
+  {% block guest %}{% endblock %}
+  {% endif %}
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

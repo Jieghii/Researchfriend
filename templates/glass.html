@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "macros.html" import stars %}
+{% block title %}玻璃球点评 · 研友{% endblock %}
+{% block content %}
+<h1 class="h1">玻璃球点评</h1>
+<p class="caption mt-8">券商与研究团队评分榜。评分为研究能力 / 服务能力 / 钞能力三维均值，券商得分由其团队得分平均而来。</p>
+
+<div class="rank-duo mt-24">
+  <section class="card" style="padding:20px">
+    <div class="flex between center">
+      <h2 class="h2">券商排行</h2>
+      <a class="caption" href="{{ url_for('glass.rank', kind='brokerage') }}">更多 ›</a>
+    </div>
+    {% if top_brokerages %}
+    <ol class="rank-list mt-16">
+      {% for item in top_brokerages %}
+      <li>
+        <a href="{{ url_for('glass.brokerage_detail', brokerage_id=item.brokerage.id) }}">
+          <span class="rank">{{ loop.index }}</span>
+          <span class="grow truncate">{{ item.brokerage.name }}</span>
+          {{ stars(item.score.overall) }}
+          <span class="numeric mono">{{ item.score.overall }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="empty"><div class="display">还没有券商得分</div></div>
+    {% endif %}
+  </section>
+
+  <section class="card" style="padding:20px">
+    <div class="flex between center">
+      <h2 class="h2">团队排行</h2>
+      <a class="caption" href="{{ url_for('glass.rank', kind='team') }}">更多 ›</a>
+    </div>
+    {% if top_teams %}
+    <ol class="rank-list mt-16">
+      {% for item in top_teams %}
+      <li>
+        <a href="{{ url_for('glass.team_detail', team_id=item.team.id) }}">
+          <span class="rank">{{ loop.index }}</span>
+          <span class="grow truncate">{{ item.team.name }}<span class="caption"> · {{ item.brokerage.name if item.brokerage else '' }}</span></span>
+          {{ stars(item.score.overall) }}
+          <span class="numeric mono">{{ item.score.overall }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="empty"><div class="display">还没有团队得分</div></div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="mt-32">
+  <h2 class="h2">全部券商</h2>
+  <div class="brokerage-grid mt-16">
+    {% for c in cards %}
+    <a class="card brokerage-card card-hover" href="{{ url_for('glass.brokerage_detail', brokerage_id=c.brokerage.id) }}">
+      <div class="brokerage-logo" style="--hue:{{ c.brokerage.hue or 0 }}">{{ c.brokerage.short_name or c.brokerage.name[:2] }}</div>
+      <div class="grow" style="min-width:0">
+        <strong class="truncate">{{ c.brokerage.name }}</strong>
+        <p class="caption mt-8 clamp-1">{{ c.brokerage.intro }}</p>
+        <div class="flex gap-8 center mt-8">
+          {% if c.score %}
+          {{ stars(c.score.overall) }}
+          <span class="numeric mono">{{ c.score.overall }}</span>
+          {% else %}
+          <span class="caption">暂无评分</span>
+          {% endif %}
+          <span class="caption">{{ c.teams_n }} 个团队</span>
+        </div>
+      </div>
+    </a>
+    {% else %}
+    <div class="empty"><div class="display">还没有券商数据</div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<p class="disclaimer mt-32">以上券商与团队均为虚构，评分与评价均为演示用虚拟数据，不代表任何真实机构。</p>
+{% endblock %}

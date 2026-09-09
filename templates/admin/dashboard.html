@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block title %}总览 · 研友管理后台{% endblock %}
+{% block content %}
+{% if using_default_password %}
+<div class="banner warn">你正在使用默认管理员密码，请尽快在 Vercel 的环境变量里设置 ADMIN_PASSWORD。</div>
+{% endif %}
+<h1 class="h1">总览</h1>
+
+<div class="stat-grid mt-24">
+  <div class="card stat"><div class="numeric-l">{{ stats.users }}</div><div class="caption">注册用户</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.buyers }}</div><div class="caption">买方</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.sellers }}</div><div class="caption">卖方</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.banned }}</div><div class="caption">已封禁</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.open_feedbacks }}</div><div class="caption">待处理反馈</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.invites }}</div><div class="caption">邀请码总数</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.thoughts }}</div><div class="caption">随想</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.reviews }}</div><div class="caption">机构评价</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.brokerages }}</div><div class="caption">券商</div></div>
+  <div class="card stat"><div class="numeric-l">{{ stats.teams }}</div><div class="caption">研究团队</div></div>
+</div>
+
+<section class="mt-32">
+  <h2 class="h2">最新注册</h2>
+  <div class="card mt-12" style="padding:0 16px">
+    {% for u in latest_users %}
+    <div class="list-row">
+      <span class="grow truncate">{{ u.nickname }}</span>
+      <span class="caption">{{ '买方' if u.role=='buyer' else ('卖方' if u.role=='seller' else '未设置') }}</span>
+      <span class="caption">{{ u.created_at.strftime('%m-%d %H:%M') }}</span>
+    </div>
+    {% else %}<div class="list-row caption">暂无</div>{% endfor %}
+  </div>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">最新反馈</h2>
+  {% for f in latest_fb %}
+  <div class="card mt-12" style="padding:16px">
+    <p class="truncate">{{ f.content }}</p>
+    <div class="flex between center mt-8">
+      <span class="caption">{{ f.created_at.strftime('%m-%d %H:%M') }}</span>
+      <span class="pill {% if f.status=='resolved' %}common{% endif %}">{{ '已处理' if f.status=='resolved' else '待处理' }}</span>
+    </div>
+  </div>
+  {% else %}<div class="empty mt-12"><div class="display">还没有反馈</div></div>{% endfor %}
+</section>
+{% endblock %}

@@ -38,7 +38,7 @@ def square():
     stocks = Tag.query.filter_by(kind="stock", is_preset=True).order_by(Tag.id).all()
     return render_template(
         "topics.html",
-        nav="topics",
+        nav="discover",
         hot=hot,
         my_tags=my_tags,
         industries=industries or [type("T", (), {"id": 0, "name": n}) for n in PRESET_INDUSTRIES],
@@ -121,7 +121,7 @@ def detail(tag_id):
         only_me = False
     return render_template(
         "topic_detail.html",
-        nav="topics",
+        nav="discover",
         tag=tag,
         followers=followers,
         people=people,

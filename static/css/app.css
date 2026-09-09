@@ -433,3 +433,172 @@ textarea.field { height: auto; min-height: 96px; padding: 12px; resize: vertical
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 120ms !important; }
   .match-card.fly-right, .match-card.fly-left { transform: none; opacity: 0; }
 }
+
+/* ===== 全站免责声明横幅 ===== */
+.site-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  padding: 7px 16px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--accent-ink, #1a1206);
+  background: var(--accent);
+  border-bottom: 1px solid var(--border-strong);
+}
+[data-theme="dark"] .site-banner { color: #1a1206; }
+
+/* ===== 表单必填标记 ===== */
+.req { color: var(--danger); }
+
+/* ===== 找回密码提示块 ===== */
+.notice {
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-btn);
+  background: var(--bg-inset);
+}
+.demo-link {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-btn);
+  background: var(--bg-surface);
+}
+.demo-link code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-all;
+  color: var(--accent);
+}
+
+/* ===== 发现页 ===== */
+.discover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.discover-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+}
+.discover-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.discover-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.chev { color: var(--text-lo); font-size: 20px; }
+
+/* ===== 星级 ===== */
+.stars { display: inline-flex; gap: 2px; vertical-align: middle; }
+.stars .star { width: 14px; height: 14px; fill: none; stroke: var(--border-strong); stroke-width: 1.4; }
+.stars .star.on { fill: var(--accent); stroke: var(--accent); }
+.star-picker { display: inline-flex; gap: 2px; }
+.star-btn {
+  background: none; border: none; cursor: pointer; padding: 0 1px;
+  font-size: 20px; line-height: 1; color: var(--border-strong);
+  transition: color var(--dur-fast) var(--ease);
+}
+.star-btn.on { color: var(--accent); }
+
+/* ===== 玻璃球点评 ===== */
+.rank-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .rank-duo { grid-template-columns: 1fr; } }
+.rank-list { list-style: none; margin: 0; padding: 0; }
+.rank-list li a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 6px; border-bottom: 1px solid var(--border-subtle);
+}
+.rank-list li:last-child a { border-bottom: none; }
+.rank-list .rank { font-family: var(--font-mono); font-size: 12px; color: var(--text-lo); width: 18px; }
+.rank-list .numeric { font-family: var(--font-mono); font-weight: 500; color: var(--accent); min-width: 32px; text-align: right; }
+.dim-scores { display: flex; gap: 10px; }
+.dim-scores .caption b { color: var(--text-hi); }
+
+.brokerage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.brokerage-card { display: flex; gap: 14px; padding: 16px; align-items: flex-start; }
+.brokerage-logo {
+  flex: none; width: 46px; height: 46px; border-radius: 12px;
+  display: grid; place-items: center;
+  font-family: var(--font-serif); font-size: 15px; font-weight: 600;
+  color: #fff;
+  background: hsl(calc(var(--hue, 0) * 1deg) 30% 42%);
+}
+.brokerage-logo.lg { width: 60px; height: 60px; font-size: 18px; }
+.score-box { flex: none; text-align: center; min-width: 92px; }
+.score-box .numeric-l { color: var(--accent); }
+.dim-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.dim-item {
+  padding: 12px; border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn); background: var(--bg-inset);
+}
+.team-list { display: grid; gap: 8px; }
+
+.review-card { padding: 16px; }
+.review-head { display: flex; align-items: center; gap: 8px; }
+.avatar-mini {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 11px;
+  background: var(--bg-inset); border: 1px solid var(--border-strong);
+  color: var(--text-mid);
+}
+.vote-btn {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-size: 13px; color: var(--text-mid);
+}
+.vote-btn.on { color: var(--accent); }
+
+.rate-box {
+  padding: 16px; border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn); background: var(--bg-inset);
+}
+.rate-rows { display: grid; gap: 10px; }
+.rate-row { display: flex; align-items: center; gap: 12px; }
+.rate-label { width: 64px; flex: none; }
+
+/* ===== 邀请码 ===== */
+.my-code {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: var(--radius-btn);
+  border: 1px dashed var(--accent); background: var(--accent-soft);
+}
+.my-code code { font-family: var(--font-mono); font-size: 20px; letter-spacing: 2px; color: var(--accent); }
+.invite-slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.invite-slots li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn); background: var(--bg-inset);
+}
+.invite-slots li.used { border-color: var(--accent); background: var(--accent-soft); }
+.slot-idx { font-family: var(--font-mono); font-size: 12px; color: var(--text-lo); width: 16px; }
+.code-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ===== 管理后台 ===== */
+.admin-shell { display: flex; min-height: calc(100vh - 32px); }
+.admin-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.admin-row:last-child { border-bottom: none; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.stat { padding: 18px; text-align: center; }
+.stat .numeric-l { color: var(--accent); }
+.pill.danger { border-color: var(--danger); color: var(--danger); }
+.btn-ghost.danger { color: var(--danger); border-color: var(--danger); }
+.banner.warn { border-color: var(--danger); color: var(--danger); background: transparent; }
+.clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }

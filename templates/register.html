@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}注册 · 研友{% endblock %}
+{% block guest %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <h1 class="display">注册研友</h1>
+    <p class="caption mt-8">填几项就能进，注册后需要完成三步资料引导</p>
+    <form method="post" class="mt-32">
+      <label class="caption">昵称 <span class="req">*</span></label>
+      <input class="field mt-8" name="nickname" maxlength="16" placeholder="2-16 个字，不能有空格" value="{{ form.nickname if form else '' }}" autocomplete="username">
+
+      <label class="caption mt-16">密码 <span class="req">*</span></label>
+      <div class="pw-wrap mt-8">
+        <input class="field" name="password" type="password" placeholder="至少 6 位" autocomplete="new-password">
+        <button type="button" class="pw-toggle" data-pw-toggle aria-label="显示密码">显</button>
+      </div>
+
+      <label class="caption mt-16">确认密码 <span class="req">*</span></label>
+      <div class="pw-wrap mt-8">
+        <input class="field" name="confirm" type="password" placeholder="再输入一次密码" autocomplete="new-password">
+        <button type="button" class="pw-toggle" data-pw-toggle aria-label="显示密码">显</button>
+      </div>
+
+      <label class="caption mt-16">邮箱</label>
+      <input class="field mt-8" name="email" placeholder="选填，忘记密码时可通过邮箱找回" value="{{ form.email if form else '' }}" autocomplete="email">
+
+      <label class="caption mt-16">邀请码 <span class="req">*</span></label>
+      <input class="field mt-8" name="invite_code" maxlength="16" placeholder="必填，向已注册的朋友索取" value="{{ form.invite_code if form else '' }}" style="text-transform:uppercase">
+
+      {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+      <button type="submit" class="btn btn-primary mt-24" style="width:100%">注册并进入</button>
+    </form>
+    <p class="caption mt-16" style="text-align:center">已经有账号了？<a href="{{ url_for('auth.login') }}">去登录</a></p>
+    <p class="disclaimer">本站为 Demo 演示项目，所有内容均为虚拟数据，请勿填写真实个人信息与常用密码</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-pw-toggle]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var input = btn.previousElementSibling;
+    if (!input) return;
+    input.type = input.type === "password" ? "text" : "password";
+    btn.textContent = input.type === "password" ? "显" : "隐";
+  });
+});
+</script>
+{% endblock %}

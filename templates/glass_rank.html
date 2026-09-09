@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import stars %}
+{% block title %}{{ title }} · 研友{% endblock %}
+{% block content %}
+<a class="caption" href="{{ url_for('glass.index') }}">‹ 返回玻璃球点评</a>
+<h1 class="h1 mt-8">{{ title }}</h1>
+<p class="caption mt-8">按综合得分排序（研究能力 / 服务能力 / 钞能力三维平均）</p>
+
+<section class="card mt-24" style="padding:20px">
+  {% if rows %}
+  <ol class="rank-list">
+    {% for r in rows %}
+    <li>
+      <a href="{{ r.href }}">
+        <span class="rank">{{ loop.index }}</span>
+        <span class="grow truncate">
+          {{ r.name }}
+          {% if r.sub %}<span class="caption"> · {{ r.sub }}</span>{% endif %}
+        </span>
+        <span class="dim-scores">
+          {% for key, label in dimensions %}
+          <span class="caption" title="{{ label }}">{{ label[:2] }} <b class="mono">{{ r.score[key] }}</b></span>
+          {% endfor %}
+        </span>
+        {{ stars(r.score.overall) }}
+        <span class="numeric mono">{{ r.score.overall }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="empty">
+    <div class="display">还没有评分数据</div>
+    <p class="caption mt-8">成为第一个打分的人吧</p>
+  </div>
+  {% endif %}
+</section>
+
+<p class="disclaimer mt-32">以上券商与团队均为虚构，评分与评价均为演示用虚拟数据，不代表任何真实机构。</p>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "admin/base.html" %}
+{% block title %}用户管理 · 研友管理后台{% endblock %}
+{% block content %}
+<h1 class="h1">用户管理</h1>
+<form class="mt-16 flex gap-8" method="get">
+  <input class="field" name="q" placeholder="按昵称搜索" value="{{ q }}">
+  <button class="btn btn-ghost" type="submit">搜索</button>
+</form>
+
+<div class="card mt-16" style="padding:0 16px">
+  {% for r in rows %}
+  <div class="admin-row">
+    <div class="grow" style="min-width:0">
+      <div class="flex gap-8 center">
+        <strong class="truncate">{{ r.user.nickname }}</strong>
+        <span class="role-chip {% if r.user.role=='buyer' %}buyer{% endif %}">{{ r.role }}</span>
+        {% if r.user.is_banned %}<span class="pill danger">已封禁</span>{% endif %}
+      </div>
+      <div class="caption mt-4">
+        {{ r.user.years or '未设置年限' }} · {{ r.user.email or '未填邮箱' }} · 注册于 {{ r.joined }}
+      </div>
+      <div class="caption mt-4">邀请码 <span class="mono">{{ r.code }}</span>（{{ r.code_used }}/{{ r.code_max }}）</div>
+    </div>
+    <div class="flex gap-8">
+      <button type="button" class="btn btn-ghost" data-ban="{{ r.user.id }}">{{ '解封' if r.user.is_banned else '封禁' }}</button>
+      <button type="button" class="btn btn-ghost danger" data-del="{{ r.user.id }}">删除</button>
+    </div>
+  </div>
+  {% else %}
+  <div class="list-row caption">没有找到用户</div>
+  {% endfor %}
+</div>
+<p class="caption mt-16">删除用户会同时清除其随想、好友关系、消息与评价，且不可恢复。</p>
+{% endblock %}
+{% block scripts %}
+<script>
+qsa("[data-ban]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var id = btn.getAttribute("data-ban");
+    api("/admin/users/" + id + "/ban", { method: "POST", body: "{}" }).then(function (r) {
+      if (r.ok) { showToast(r.banned ? "已封禁" : "已解封", "success"); setTimeout(function(){location.reload();}, 600); }
+      else showToast("操作失败", "error");
+    });
+  });
+});
+qsa("[data-del]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    if (!confirm("确定删除这个用户及其全部数据？不可恢复。")) return;
+    var id = btn.getAttribute("data-del");
+    api("/admin/users/" + id + "/delete", { method: "POST", body: "{}" }).then(function (r) {
+      if (r.ok) { showToast("已删除", "success"); setTimeout(function(){location.reload();}, 600); }
+      else showToast("删除失败", "error");
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -36,6 +36,19 @@ def _secret_key() -> str:
 
 class Config:
     SECRET_KEY = _secret_key()
+    # 管理后台密码（/admin）。生产环境请务必在 Vercel 改为自己的密码。
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or "yanyou-admin-2026"
+    ADMIN_IS_DEFAULT = not os.environ.get("ADMIN_PASSWORD")
+    # 邮件配置：全部填齐则密码重置链接会真的发到邮箱；否则走演示模式（链接直接显示在页面上）
+    MAIL_SERVER = os.environ.get("MAIL_SERVER") or ""
+    MAIL_PORT = int(os.environ.get("MAIL_PORT") or 465)
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME") or ""
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD") or ""
+    MAIL_FROM = os.environ.get("MAIL_FROM") or (os.environ.get("MAIL_USERNAME") or "")
+    MAIL_USE_SSL = (os.environ.get("MAIL_USE_SSL") or "1") == "1"
+    MAIL_ENABLED = bool(MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD and MAIL_FROM)
+    # 邀请码默认额度
+    INVITE_MAX_USES = int(os.environ.get("INVITE_MAX_USES") or 5)
     SQLALCHEMY_DATABASE_URI = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True

@@ -1,0 +1,90 @@
+{% extends "admin/base.html" %}
+{% block title %}邀请码 · 研友管理后台{% endblock %}
+{% block content %}
+<h1 class="h1">邀请码</h1>
+<p class="caption mt-8">生成系统邀请码（不属于任何用户），用于种子用户注册。</p>
+
+<section class="card mt-16" style="padding:20px">
+  <div class="flex gap-12 wrap">
+    <label class="caption">生成数量
+      <input class="field mt-4" id="inv-count" type="number" min="1" max="50" value="5" style="width:100px">
+    </label>
+    <label class="caption">每个可用次数
+      <input class="field mt-4" id="inv-max" type="number" min="1" max="999" value="5" style="width:100px">
+    </label>
+    <label class="caption grow">备注
+      <input class="field mt-4" id="inv-note" maxlength="64" placeholder="选填，如「内测第一批」">
+    </label>
+  </div>
+  <button type="button" class="btn btn-primary mt-16" id="inv-create">生成邀请码</button>
+  <div id="inv-result" class="mt-16" hidden>
+    <p class="caption">已生成：</p>
+    <div class="code-chips mt-8" id="inv-codes"></div>
+  </div>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">全部邀请码</h2>
+  <div class="card mt-12" style="padding:0 16px">
+    {% for r in rows %}
+    <div class="admin-row">
+      <div class="grow" style="min-width:0">
+        <div class="flex gap-8 center">
+          <span class="mono">{{ r.code }}</span>
+          {% if not r.active %}<span class="pill danger">已停用</span>{% endif %}
+          {% if r.used >= r.max_uses %}<span class="pill">已用完</span>{% endif %}
+        </div>
+        <div class="caption mt-4">归属：{{ r.owner }} · {{ r.used }}/{{ r.max_uses }} · 创建于 {{ r.created }}</div>
+        {% if r.invited %}<div class="caption mt-4">已邀请：{{ r.invited|join('、') }}</div>{% endif %}
+      </div>
+      <button type="button" class="btn btn-ghost" data-toggle="{{ r.id }}">{{ '启用' if not r.active else '停用' }}</button>
+    </div>
+    {% else %}
+    <div class="list-row caption">还没有邀请码</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var btn = document.getElementById("inv-create");
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    var count = parseInt(document.getElementById("inv-count").value || "1", 10);
+    var max_uses = parseInt(document.getElementById("inv-max").value || "5", 10);
+    var note = document.getElementById("inv-note").value || "";
+    btn.disabled = true;
+    api("/admin/invites/create", {
+      method: "POST",
+      body: JSON.stringify({ count: count, max_uses: max_uses, note: note }),
+    }).then(function (r) {
+      btn.disabled = false;
+      if (!r.ok) return showToast("生成失败", "error");
+      var box = document.getElementById("inv-result");
+      var chips = document.getElementById("inv-codes");
+      chips.innerHTML = "";
+      (r.codes || []).forEach(function (c) {
+        var s = document.createElement("span");
+        s.className = "pill common mono";
+        s.textContent = c;
+        chips.appendChild(s);
+      });
+      box.hidden = false;
+      showToast("已生成 " + (r.codes || []).length + " 张", "success");
+      setTimeout(function () { location.reload(); }, 1500);
+    });
+  });
+
+  qsa("[data-toggle]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var id = b.getAttribute("data-toggle");
+      api("/admin/invites/" + id + "/toggle", { method: "POST", body: "{}" }).then(function (r) {
+        if (r.ok) { showToast(r.active ? "已启用" : "已停用", "success"); setTimeout(function(){location.reload();}, 600); }
+        else showToast("操作失败", "error");
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}
