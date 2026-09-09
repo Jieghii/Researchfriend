@@ -48,22 +48,100 @@ python app.py
 
 `.env` 已加入 `.gitignore`，不要提交到 Git。
 
-## 部署到 Zeabur（推荐，国内直连无需翻墙）
+## 部署到腾讯云 / 阿里云 / 任意 Linux 服务器（最稳，国内极速）
 
-`*.zeabur.app` 域名在大陆可直接访问，比 Vercel 默认域名稳定。仓库里已经放了 `Procfile` 与 `zbpack.json`，Zeabur 会自动识别为 Flask + Gunicorn。
+> 适合 100+ 用户长期运行，**不会冷启动、不休眠**、单实例能扛到 300 并发，5-10 元/月。
 
-1. 在 [Neon](https://neon.tech) 准备好 Postgres 数据库，复制连接串（需含 `sslmode=require`，应用会自动补上）。
-2. 用 GitHub 账号登录 [zeabur.com](https://zeabur.com)。
-3. 控制台点 **New Project** → 选个区域（**香港**或**新加坡**延迟最低）→ 进项目后 **Deploy from GitHub** → 选择 `Jieghii/Researchfriend` 这个仓库，**Branches to deploy** 选 `main`，点 Deploy，等待构建。
-4. 进入刚部署好的服务 → **Variables**，新增：
-   - `SECRET_KEY`：一段随机长字符串（可 `python -c "import secrets;print(secrets.token_hex(32))"` 生成）
+仓库自带 `Dockerfile` + `docker-compose.yml` + `deploy.sh` 一键脚本。任意 Ubuntu/Debian 服务器买好之后，SSH 上去跑一行命令即可。
+
+### 准备
+
+1. 买一台轻量服务器，配置推荐：
+   - **腾讯云轻量应用服务器 2核2G**：年付 68 元（约 5.7 元/月），[购买链接](https://cloud.tencent.com/product/lighthouse)
+   - 镜像选 **Ubuntu 22.04 LTS**，公网带宽 5 Mbps 就够
+   - 安全组放通 22 / 80 / 443 / 5000 端口
+
+2. 服务器绑 SSH，本地能连上。Windows 可用 PowerShell + OpenSSH 或 Termius。
+
+### 一键部署
+
+```bash
+# 1. SSH 登录服务器
+ssh root@你的服务器IP
+
+# 2. 把代码传上去（三选一）
+#    a. 直接从 GitHub 拉（推荐）
+cd /opt
+git clone https://github.com/Jieghii/Researchfriend.git researchfriend
+cd researchfriend/code
+
+#    b. 或者用 scp 从本机推上去
+#       scp -r 本机项目路径/* root@你的IP:/opt/researchfriend/code/
+
+# 3. 一键安装 + 启动
+bash deploy.sh
+```
+
+`deploy.sh` 会自动做：
+1. 检测/安装 Docker 和 docker compose
+2. 生成 `SECRET_KEY`、`POSTGRES_PASSWORD`、`ADMIN_PASSWORD`（写入 `.env`）
+3. `docker compose up -d --build` 构建并启动 Flask + Postgres 容器
+4. 可选安装 Nginx 反向代理（用 80 端口访问，不用输 :5000）
+5. 输出访问地址
+
+### 后续维护
+
+```bash
+# 查看实时日志
+cd /opt/researchfriend/code && docker compose logs -f web
+
+# 更新代码后重部署
+cd /opt/researchfriend/code && git pull && docker compose up -d --build
+
+# 备份数据库
+docker compose exec db pg_dump -U researchfriend researchfriend > backup_$(date +%F).sql
+
+# 恢复数据库
+cat backup_2026-01-01.sql | docker compose exec -T db psql -U researchfriend -d researchfriend
+```
+
+### 绑定域名 + HTTPS
+
+买好域名解析到服务器 IP，然后：
+
+```bash
+# 安装 certbot 申请免费证书
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d yourdomain.com
+```
+
+Certbot 自动改 Nginx 配置加 HTTPS。
+
+---
+
+## 部署到 Zeabur（国内直连，Free plan 有冷启动限制）
+
+`*.zeabur.app` 域名在大陆可直接访问。仓库里已经放了 `Procfile` 与 `zbpack.json`，Zeabur 会自动识别为 Flask + Gunicorn。
+
+> ⚠️ **Free Plan 限制**：每月 $5 credit，1 vCPU / 2 GB，**闲置后会自动休眠（冷启动几秒）**。100 用户长期使用建议升级 Dev Plan（$5/月，不休眠）。
+
+### Free Plan 操作步骤（不收钱，但有冷启动）
+
+1. 用 GitHub 账号登录 [zeabur.com](https://zeabur.com)。**不要**点订阅付费套餐，没订阅就默认是 Free Plan。
+2. 在 [Neon](https://neon.tech) 准备好 Postgres 数据库，复制连接串。
+3. 控制台 → **Create Project** → 选区域（**香港** / **新加坡** / **东京** 这些亚洲节点是免费的，欧美节点要付费）。
+4. 进项目 → **Add Service** → 选 **Deploy your source code (GitHub)** → 授权仓库 → 选 `Jieghii/Researchfriend` 的 `main` 分支 → 点 Deploy。
+5. 等待 1-3 分钟构建完成。
+6. 进入刚部署好的服务 → **Variables**，新增：
+   - `SECRET_KEY`：随机长字符串（PowerShell 跑 `python -c "import secrets;print(secrets.token_hex(32))"` 生成）
    - `DATABASE_URL`：Neon 的 Postgres 连接串
    - `ADMIN_PASSWORD`：管理后台密码，建议改
-   - （可选）`MAIL_SERVER` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_FROM` / `MAIL_USE_SSL`：填齐后找回密码会真发邮件
-5. 在 **Networking** 里点 **Generate Domain**，拿到一个 `*.zeabur.app` 域名，立即可访问，国内直连。
-6. 后续 push 到 `main` 分支会自动重部署。
+7. 在 **Networking** → **Generate Domain** 拿一个 `*.zeabur.app` 域名，立即可访问，国内直连。
+8. 后续 push 到 `main` 分支会自动重部署。
 
-> Zeabur 免费 Starter 每月 $5 compute credits，Demo 跑这个 Flask 项目每月消耗大概 $1 以内；额度用完只暂停服务不删数据。
+### 切换 Dev Plan（避免休眠）
+
+控制台 → 右上角头像 → **Billing** → 选 **Dev Plan ($5/mo)** → 14 天免费试用，过后扣 $5/月。
 
 ## 部署到 Vercel（旧）
 

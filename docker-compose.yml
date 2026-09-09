@@ -1,0 +1,37 @@
+# docker-compose.yml — 本地一键起 Flask + Postgres
+# 用法：docker compose up -d
+# 关闭：docker compose down
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: researchfriend
+      POSTGRES_USER: researchfriend
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U researchfriend -d researchfriend"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://researchfriend:${POSTGRES_PASSWORD:-changeme}@db:5432/researchfriend?sslmode=disable
+      SECRET_KEY: ${SECRET_KEY:-please-change-me-32-bytes-random}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      GUNICORN_WORKERS: "2"
+      PORT: "5000"
+    ports:
+      - "${WEB_PORT:-5000}:5000"
+
+volumes:
+  pgdata:
