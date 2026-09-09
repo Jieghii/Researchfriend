@@ -22,7 +22,21 @@ bp = Blueprint("chat", __name__)
 
 @bp.route("/chat")
 def inbox():
+    from extensions import db
+    from models import Conversation, Message
     me = current_user()
+    # 进来聊天收件箱：把所有对方发给我的未读消息标记为已读，让顶部小红点消失
+    conv_ids = (
+        db.session.query(Conversation.id)
+        .filter(db.or_(Conversation.user_a_id == me.id, Conversation.user_b_id == me.id))
+        .subquery()
+    )
+    Message.query.filter(
+        Message.conversation_id.in_(conv_ids),
+        Message.sender_id != me.id,
+        Message.is_read.is_(False),
+    ).update({"is_read": True}, synchronize_session=False)
+    db.session.commit()
     return render_template("chats.html", nav="chat", items=conversation_inbox(me))
 
 
@@ -118,7 +132,7 @@ def send(conv_id):
         return jsonify({"ok": False, "error": "空消息不能发送"}), 400
     if len(text) > 500:
         return jsonify({"ok": False, "error": "单条最多 500 字"}), 400
-    m = Message(conversation_id=conv.id, sender_id=me.id, content=text, created_at=now_utc(), is_read=True)
+    m = Message(conversation_id=conv.id, sender_id=me.id, content=text, created_at=now_utc(), is_read=False)
     conv.last_message_at = m.created_at
     db.session.add(m)
     db.session.commit()

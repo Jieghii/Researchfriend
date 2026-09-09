@@ -101,7 +101,7 @@ def timeline():
     items, has_more = _page_items(me, scope, tag_id, 1, sort)
     return render_template(
         "thoughts.html",
-        nav="thoughts",
+        nav="discover",
         items=_bundle(me, items),
         has_more=has_more,
         scope=scope,
@@ -153,7 +153,7 @@ def detail(tid):
     me = current_user()
     th = Thought.query.get_or_404(tid)
     if not thought_visible_to(th, me):
-        return render_template("thought_detail.html", nav="thoughts", missing=True), 404
+        return render_template("thought_detail.html", nav="discover", missing=True), 404
     author = User.query.get(th.author_id)
     tmap = tags_for_thoughts([th.id])
     likes_count, liked_ids, comments_count = likes_and_comments_for([th.id], me.id)
@@ -166,7 +166,7 @@ def detail(tid):
     focus = request.args.get("focus") == "1"
     return render_template(
         "thought_detail.html",
-        nav="thoughts",
+        nav="discover",
         missing=False,
         item=item,
         likers=[user_brief(u) for u in likers],

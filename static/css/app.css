@@ -602,3 +602,25 @@ textarea.field { height: auto; min-height: 96px; padding: 12px; resize: vertical
 .btn-ghost.danger { color: var(--danger); border-color: var(--danger); }
 .banner.warn { border-color: var(--danger); color: var(--danger); background: transparent; }
 .clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+
+
+/* 导航项内的小红点：更紧贴文字 */
+.nav-list .nav-item .badge,
+.mobile-tab a .badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  min-width: 16px;
+  height: 16px;
+  font-size: 10.5px;
+  line-height: 16px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+/* 聊天未读用"未查阅"的琥珀金，避免与"好友请求"红色混淆 */
+.nav-list .nav-item .badge.badge-unread { background: var(--accent); color: var(--accent-ink, #1a1206); }
+.mobile-tab a .badge.badge-unread { background: var(--accent); color: var(--accent-ink, #1a1206); }

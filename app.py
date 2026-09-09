@@ -57,18 +57,38 @@ def gate():
 
 @app.context_processor
 def inject_globals():
+    from models import Conversation, FriendRequest, Message, Tag, UserTag
+
     user = current_user()
     pending = 0
     my_tags = []
+    chat_unread = 0
     if user:
-        from models import FriendRequest, Tag, UserTag
-
         pending = FriendRequest.query.filter_by(to_user_id=user.id, status="pending").count()
         my_tags = Tag.query.join(UserTag, UserTag.tag_id == Tag.id).filter(UserTag.user_id == user.id).all()
+        # 计算所有会话的未读消息总数（对方发给我的、未读）
+        friend_convs = (
+            db.session.query(Conversation.id)
+            .filter(
+                db.or_(Conversation.user_a_id == user.id, Conversation.user_b_id == user.id)
+            )
+            .subquery()
+        )
+        chat_unread = (
+            db.session.query(db.func.count(Message.id))
+            .filter(
+                Message.conversation_id.in_(friend_convs),
+                Message.sender_id != user.id,
+                Message.is_read.is_(False),
+            )
+            .scalar()
+            or 0
+        )
     return {
         "current_user": user,
         "avatar_index": avatar_index(user.nickname) if user else 0,
         "pending_count": pending,
+        "chat_unread": chat_unread,
         "preset_industries": PRESET_INDUSTRIES,
         "preset_stocks": PRESET_STOCKS,
         "my_tags": my_tags,
