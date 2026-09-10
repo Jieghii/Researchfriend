@@ -2,7 +2,7 @@
 {% block title %}机构与团队 · 研友管理后台{% endblock %}
 {% block content %}
 <h1 class="h1">机构与团队</h1>
-<p class="caption mt-8">可修改券商 / 买方机构及其下属团队的名称。</p>
+<p class="caption mt-8">可编辑券商 / 买方机构及其下属团队的名称与简介，也可一键删除（含其评分与评价）。</p>
 
 {% for grp in groups %}
 <section class="mt-32">
@@ -14,14 +14,20 @@
         <strong>{{ item.org.name }}</strong>
         <span class="caption" style="display:block">{{ item.org.intro or '' }}</span>
       </div>
-      <button type="button" class="btn btn-ghost" data-rename-org="{{ item.org.id }}" data-name="{{ item.org.name }}">改名</button>
+      <div class="flex gap-8">
+        <button type="button" class="btn btn-ghost" data-edit-org="{{ item.org.id }}" data-name="{{ item.org.name }}" data-intro="{{ item.org.intro or '' }}">编辑</button>
+        <button type="button" class="btn btn-ghost danger" data-delete-org="{{ item.org.id }}" data-name="{{ item.org.name }}">删除</button>
+      </div>
     </div>
     {% if item.teams %}
     <div class="mt-12" style="padding-left:12px;border-left:2px solid var(--line)">
       {% for t in item.teams %}
-      <div class="flex between center" style="padding:6px 0">
+      <div class="flex between center" style="padding:6px 0;gap:8px">
         <span class="caption truncate">{{ t.name }}</span>
-        <button type="button" class="btn btn-ghost" data-rename-team="{{ t.id }}" data-name="{{ t.name }}">改名</button>
+        <div class="flex gap-8">
+          <button type="button" class="btn btn-ghost" data-edit-team="{{ t.id }}" data-name="{{ t.name }}" data-intro="{{ t.intro or '' }}">编辑</button>
+          <button type="button" class="btn btn-ghost danger" data-delete-team="{{ t.id }}" data-name="{{ t.name }}">删除</button>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -38,25 +44,45 @@
 {% block scripts %}
 <script>
 (function () {
-  function rename(url, oldName, label) {
+  function edit(url, oldName, oldIntro, label) {
     var name = window.prompt("输入新的" + label + "名称", oldName);
     if (name === null) return;
     name = name.trim();
     if (!name) { showToast("名称不能为空", "error"); return; }
-    api(url, { method: "POST", body: JSON.stringify({ name: name }) }).then(function (r) {
+    var intro = window.prompt("输入新的" + label + "简介（≤200字，留空清除）", oldIntro || "");
+    if (intro === null) return;
+    api(url, { method: "POST", body: JSON.stringify({ name: name, intro: intro.trim() }) }).then(function (r) {
       if (!r.ok) { showToast(r.error || "修改失败", "error"); return; }
-      showToast("已改名为「" + r.name + "」", "success");
+      showToast("已更新", "success");
       setTimeout(function () { location.reload(); }, 600);
     });
   }
-  qsa("[data-rename-org]").forEach(function (b) {
+  function del(url, name, label) {
+    if (!window.confirm("确认删除" + label + "「" + name + "」？\n\n会一并清除其全部评分与评价，且不可恢复。")) return;
+    api(url, { method: "POST" }).then(function (r) {
+      if (!r.ok) { showToast(r.error || "删除失败", "error"); return; }
+      showToast("已删除", "success");
+      setTimeout(function () { location.reload(); }, 600);
+    });
+  }
+  qsa("[data-edit-org]").forEach(function (b) {
     b.addEventListener("click", function () {
-      rename("/admin/api/orgs/" + b.getAttribute("data-rename-org") + "/rename", b.getAttribute("data-name"), "机构");
+      edit("/admin/api/orgs/" + b.dataset.editOrg + "/update", b.dataset.name, b.dataset.intro, "机构");
     });
   });
-  qsa("[data-rename-team]").forEach(function (b) {
+  qsa("[data-delete-org]").forEach(function (b) {
     b.addEventListener("click", function () {
-      rename("/admin/api/teams/" + b.getAttribute("data-rename-team") + "/rename", b.getAttribute("data-name"), "团队");
+      del("/admin/api/orgs/" + b.dataset.deleteOrg + "/delete", b.dataset.name, "机构");
+    });
+  });
+  qsa("[data-edit-team]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      edit("/admin/api/teams/" + b.dataset.editTeam + "/update", b.dataset.name, b.dataset.intro, "团队");
+    });
+  });
+  qsa("[data-delete-team]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      del("/admin/api/teams/" + b.dataset.deleteTeam + "/delete", b.dataset.name, "团队");
     });
   });
 })();

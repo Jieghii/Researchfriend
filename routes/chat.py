@@ -23,21 +23,8 @@ bp = Blueprint("chat", __name__)
 
 @bp.route("/chat")
 def inbox():
-    from extensions import db
-    from models import Conversation, Message
     me = current_user()
-    # 进来聊天收件箱：把所有对方发给我的未读消息标记为已读，让顶部小红点消失
-    conv_ids = (
-        db.session.query(Conversation.id)
-        .filter(db.or_(Conversation.user_a_id == me.id, Conversation.user_b_id == me.id))
-        .subquery()
-    )
-    Message.query.filter(
-        Message.conversation_id.in_(conv_ids),
-        Message.sender_id != me.id,
-        Message.is_read.is_(False),
-    ).update({"is_read": True}, synchronize_session=False)
-    db.session.commit()
+    # 只渲染，不要清空未读；具体对话页进入时再标已读，让收件箱红点正确显示
     return render_template("chats.html", nav="chat", items=conversation_inbox(me))
 
 

@@ -2,7 +2,7 @@
 {% from "macros.html" import stars %}
 {% block title %}{{ org.name }} · {{ cfg.title }}{% endblock %}
 {% block content %}
-<a class="caption" href="{{ url_for('glass.index') if key == 'wealth' else url_for('glass.ironbull') }}">‹ 返回{{ cfg.title }}</a>
+<a class="btn btn-ghost" href="{{ url_for('glass.index') if key == 'wealth' else url_for('glass.ironbull') }}" style="height:32px;padding:0 14px">‹ 返回{{ cfg.title }}</a>
 
 <section class="card mt-8" style="padding:24px">
   <div class="flex gap-16 center">

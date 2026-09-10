@@ -12,6 +12,7 @@ from flask import (
     session,
     url_for,
 )
+from sqlalchemy import bindparam
 
 from codes import gen_invite_code
 from extensions import db
@@ -339,6 +340,57 @@ def rename_org(oid):
     return jsonify({"ok": True, "name": o.name})
 
 
+@bp.route("/api/orgs/<int:oid>/update", methods=["POST"])
+@admin_required
+def update_org(oid):
+    o = Brokerage.query.get_or_404(oid)
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    intro = (data.get("intro") or "").strip()
+    if name:
+        if len(name) > 32:
+            return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
+        dup = Brokerage.query.filter(Brokerage.name == name, Brokerage.id != o.id).first()
+        if dup:
+            return jsonify({"ok": False, "error": "已存在同名机构"}), 400
+        o.name = name
+        o.short_name = name[:2]
+    if len(intro) > 200:
+        return jsonify({"ok": False, "error": "简介不能超过 200 字"}), 400
+    o.intro = intro or None
+    db.session.commit()
+    return jsonify({"ok": True, "name": o.name, "intro": o.intro})
+
+
+@bp.route("/api/orgs/<int:oid>/delete", methods=["POST"])
+@admin_required
+def delete_org(oid):
+    """删除机构：先级联删下属团队（含其评分与评价），再清掉对机构的评价，最后删机构本身。"""
+    o = Brokerage.query.get_or_404(oid)
+    team_ids = [t.id for t in ResearchTeam.query.filter_by(brokerage_id=oid).all()]
+    if team_ids:
+        db.session.execute(
+            db.text("DELETE FROM team_ratings WHERE team_id IN :ids").bindparams(
+                bindparam("ids", expanding=True)
+            ),
+            {"ids": team_ids},
+        )
+        db.session.execute(
+            db.text("DELETE FROM reviews WHERE target_type='team' AND target_id IN :ids").bindparams(
+                bindparam("ids", expanding=True)
+            ),
+            {"ids": team_ids},
+        )
+        ResearchTeam.query.filter_by(brokerage_id=oid).delete()
+    db.session.execute(
+        db.text("DELETE FROM reviews WHERE target_type='brokerage' AND target_id=:oid"),
+        {"oid": oid},
+    )
+    db.session.delete(o)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @bp.route("/api/teams/<int:tid>/rename", methods=["POST"])
 @admin_required
 def rename_team(tid):
@@ -352,6 +404,41 @@ def rename_team(tid):
     t.name = name
     db.session.commit()
     return jsonify({"ok": True, "name": t.name})
+
+
+@bp.route("/api/teams/<int:tid>/update", methods=["POST"])
+@admin_required
+def update_team(tid):
+    t = ResearchTeam.query.get_or_404(tid)
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    intro = (data.get("intro") or "").strip()
+    if name:
+        if len(name) > 32:
+            return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
+        t.name = name
+    if len(intro) > 200:
+        return jsonify({"ok": False, "error": "简介不能超过 200 字"}), 400
+    t.intro = intro or None
+    db.session.commit()
+    return jsonify({"ok": True, "name": t.name, "intro": t.intro})
+
+
+@bp.route("/api/teams/<int:tid>/delete", methods=["POST"])
+@admin_required
+def delete_team(tid):
+    """删除团队：先删其评分与评价，再删团队。"""
+    t = ResearchTeam.query.get_or_404(tid)
+    db.session.execute(
+        db.text("DELETE FROM team_ratings WHERE team_id=:tid"), {"tid": tid}
+    )
+    db.session.execute(
+        db.text("DELETE FROM reviews WHERE target_type='team' AND target_id=:tid"),
+        {"tid": tid},
+    )
+    db.session.delete(t)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 # ---------- 删除随想 / 评价（附带理由通知用户） ----------

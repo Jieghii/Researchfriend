@@ -27,9 +27,9 @@
       <nav class="nav-list">
         <a class="nav-item {% if nav=='match' %}active{% endif %}" href="{{ url_for('match.page') }}">{{ svg_user() }} 找研友</a>
         <a class="nav-item {% if nav=='topics' %}active{% endif %}" href="{{ url_for('topics.square') }}">{{ svg_hash() }} 话题</a>
-        <a class="nav-item {% if nav=='chat' %}active{% endif %}" href="{{ url_for('chat.inbox') }}">{{ svg_chat() }} 聊天{% if chat_unread %}<span class="badge badge-unread">{{ chat_unread if chat_unread < 100 else '99+' }}{% endif %}</a>
+        <a class="nav-item {% if nav=='chat' %}active{% endif %}" href="{{ url_for('chat.inbox') }}">{{ svg_chat() }} 聊天{% if chat_unread %}<span class="badge badge-unread">{{ chat_unread if chat_unread < 100 else '99+' }}</span>{% endif %}{% if pending_count %}<span class="badge">{{ pending_count if pending_count < 100 else '99+' }}</span>{% endif %}</a>
         <a class="nav-item {% if nav=='discover' %}active{% endif %}" href="{{ url_for('discover.page') }}">{{ svg_compass() }} 发现</a>
-        <a class="nav-item {% if nav=='me' %}active{% endif %}" href="{{ url_for('profile.me_page') }}">{{ svg_me() }} 我的{% if pending_count %}<span class="badge">{{ pending_count if pending_count < 100 else '99+' }}{% endif %}</a>
+        <a class="nav-item {% if nav=='me' %}active{% endif %}" href="{{ url_for('profile.me_page') }}">{{ svg_me() }} 我的</a>
       </nav>
       <div class="theme-switch">
         <span data-theme-label>主题</span>
@@ -45,9 +45,9 @@
   <nav class="mobile-tab" aria-label="主导航">
     <a class="{% if nav=='match' %}active{% endif %}" href="{{ url_for('match.page') }}">{{ svg_user() }}找研友</a>
     <a class="{% if nav=='topics' %}active{% endif %}" href="{{ url_for('topics.square') }}">{{ svg_hash() }}话题</a>
-    <a class="{% if nav=='chat' %}active{% endif %}" href="{{ url_for('chat.inbox') }}">{{ svg_chat() }}聊天{% if chat_unread %}<span class="badge badge-unread">{{ chat_unread if chat_unread < 100 else '99+' }}{% endif %}</a>
+    <a class="{% if nav=='chat' %}active{% endif %}" href="{{ url_for('chat.inbox') }}">{{ svg_chat() }}聊天{% if chat_unread %}<span class="badge badge-unread">{{ chat_unread if chat_unread < 100 else '99+' }}</span>{% endif %}{% if pending_count %}<span class="badge">{{ pending_count if pending_count < 100 else '99+' }}</span>{% endif %}</a>
     <a class="{% if nav=='discover' %}active{% endif %}" href="{{ url_for('discover.page') }}">{{ svg_compass() }}发现</a>
-    <a class="{% if nav=='me' %}active{% endif %}" href="{{ url_for('profile.me_page') }}">{{ svg_me() }}我的{% if pending_count %}<span class="badge">{{ pending_count if pending_count < 100 else '99+' }}{% endif %}</a>
+    <a class="{% if nav=='me' %}active{% endif %}" href="{{ url_for('profile.me_page') }}">{{ svg_me() }}我的</a>
   </nav>
   {% include "_modals.html" %}
   {% else %}

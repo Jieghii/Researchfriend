@@ -2,11 +2,11 @@
 {% from "macros.html" import stars %}
 {% block title %}{{ team.name }} · {{ cfg.title }}{% endblock %}
 {% block content %}
-<a class="caption" href="{{ url_for('glass.org_detail', key=key, org_id=org.id) }}">‹ 返回 {{ org.name }}</a>
+<a class="btn btn-ghost" href="{{ url_for('glass.index') if key == 'wealth' else url_for('glass.ironbull') }}" style="height:32px;padding:0 14px">‹ 返回{{ cfg.title }}</a>
 
 <section class="card mt-8" style="padding:24px">
   <h1 class="h1">{{ team.name }}</h1>
-  <p class="caption mt-8">{{ org.name }} · {{ team.intro }}</p>
+  <p class="caption mt-8">{{ org.name }}</p>
 
   {% if score %}
   <div class="flex gap-24 center mt-24 wrap">
