@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% from "macros.html" import svg_hash, svg_users, svg_glass, svg_pen, svg_gift, svg_comment %}
+{% from "macros.html" import svg_hash, svg_users, svg_glass, svg_pen, svg_gift, svg_comment, svg_bull %}
 {% block title %}发现 · 研友{% endblock %}
 {% block content %}
 <h1 class="h1">发现</h1>
-<p class="caption mt-8">话题、通讯录、机构点评、反馈与邀请码都在这里</p>
+<p class="caption mt-8">随想与两大排行榜都在这里</p>
 
 <div class="discover-grid mt-24">
   {% for e in entries %}
@@ -15,6 +15,7 @@
       {% elif e.icon == 'pen' %}{{ svg_pen() }}
       {% elif e.icon == 'gift' %}{{ svg_gift() }}
       {% elif e.icon == 'comment' %}{{ svg_comment() }}
+      {% elif e.icon == 'bull' %}{{ svg_bull() }}
       {% endif %}
     </div>
     <div class="grow" style="min-width:0">

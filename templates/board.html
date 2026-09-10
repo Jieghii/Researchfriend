@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% from "macros.html" import stars %}
-{% block title %}玻璃球点评 · 研友{% endblock %}
+{% block title %}{{ cfg.title }} · 研友{% endblock %}
 {% block content %}
 <div class="flex between center wrap" style="gap:12px">
   <div>
-    <h1 class="h1">玻璃球点评</h1>
-    <p class="caption mt-8">券商与研究团队评分榜。评分为研究能力 / 服务能力 / 钞能力三维均值，券商得分由其团队得分平均而来。</p>
+    <h1 class="h1">{{ cfg.title }}</h1>
+    <p class="caption mt-8">{{ cfg.subtitle }}。评分为 {{ cfg.dims|map(attribute=1)|join(' / ') }} 三维均值，{{ cfg.org_label }}得分由其团队得分平均而来。</p>
+    <p class="caption mt-8">打分标准：1 星夯、2 星很夯、3 星非常夯、4 星超级夯、5 星夯爆了。</p>
   </div>
   {% if current_user %}
-    {% if current_user.role == 'buyer' %}
+    {% if can_rate %}
     <button type="button" class="btn btn-primary" data-open-add-team>+ 新增团队评分</button>
     {% else %}
     <button type="button" class="btn btn-ghost" data-seller-deny-add>+ 新增团队评分</button>
@@ -21,16 +22,16 @@
 <div class="rank-duo mt-24">
   <section class="card" style="padding:20px">
     <div class="flex between center">
-      <h2 class="h2">券商排行</h2>
-      <a class="caption" href="{{ url_for('glass.rank', kind='brokerage') }}">更多 ›</a>
+      <h2 class="h2">{{ cfg.org_label }}排行</h2>
+      <a class="caption" href="{{ url_for('glass.rank', key=key, kind='org') }}">更多 ›</a>
     </div>
-    {% if top_brokerages %}
+    {% if top_orgs %}
     <ol class="rank-list mt-16">
-      {% for item in top_brokerages %}
+      {% for item in top_orgs %}
       <li>
-        <a href="{{ url_for('glass.brokerage_detail', brokerage_id=item.brokerage.id) }}">
+        <a href="{{ url_for('glass.org_detail', key=key, org_id=item.org.id) }}">
           <span class="rank">{{ loop.index }}</span>
-          <span class="grow truncate">{{ item.brokerage.name }}</span>
+          <span class="grow truncate">{{ item.org.name }}</span>
           {{ stars(item.score.overall) }}
           <span class="numeric mono">{{ item.score.overall }}</span>
         </a>
@@ -38,22 +39,22 @@
       {% endfor %}
     </ol>
     {% else %}
-    <div class="empty"><div class="display">还没有券商得分</div></div>
+    <div class="empty"><div class="display">还没有{{ cfg.org_label }}得分</div></div>
     {% endif %}
   </section>
 
   <section class="card" style="padding:20px">
     <div class="flex between center">
-      <h2 class="h2">团队排行</h2>
-      <a class="caption" href="{{ url_for('glass.rank', kind='team') }}">更多 ›</a>
+      <h2 class="h2">{{ cfg.team_label }}排行</h2>
+      <a class="caption" href="{{ url_for('glass.rank', key=key, kind='team') }}">更多 ›</a>
     </div>
     {% if top_teams %}
     <ol class="rank-list mt-16">
       {% for item in top_teams %}
       <li>
-        <a href="{{ url_for('glass.team_detail', team_id=item.team.id) }}">
+        <a href="{{ url_for('glass.team_detail', key=key, team_id=item.team.id) }}">
           <span class="rank">{{ loop.index }}</span>
-          <span class="grow truncate">{{ item.team.name }}<span class="caption"> · {{ item.brokerage.name if item.brokerage else '' }}</span></span>
+          <span class="grow truncate">{{ item.team.name }}<span class="caption"> · {{ item.org.name if item.org else '' }}</span></span>
           {{ stars(item.score.overall) }}
           <span class="numeric mono">{{ item.score.overall }}</span>
         </a>
@@ -61,20 +62,20 @@
       {% endfor %}
     </ol>
     {% else %}
-    <div class="empty"><div class="display">还没有团队得分</div></div>
+    <div class="empty"><div class="display">还没有{{ cfg.team_label }}得分</div></div>
     {% endif %}
   </section>
 </div>
 
 <section class="mt-32">
-  <h2 class="h2">全部券商</h2>
+  <h2 class="h2">全部{{ cfg.org_label }}</h2>
   <div class="brokerage-grid mt-16">
     {% for c in cards %}
-    <a class="card brokerage-card card-hover" href="{{ url_for('glass.brokerage_detail', brokerage_id=c.brokerage.id) }}">
-      <div class="brokerage-logo" style="--hue:{{ c.brokerage.hue or 0 }}">{{ c.brokerage.short_name or c.brokerage.name[:2] }}</div>
+    <a class="card brokerage-card card-hover" href="{{ url_for('glass.org_detail', key=key, org_id=c.org.id) }}">
+      <div class="brokerage-logo" style="--hue:{{ c.org.hue or 0 }}">{{ c.org.short_name or c.org.name[:2] }}</div>
       <div class="grow" style="min-width:0">
-        <strong class="truncate">{{ c.brokerage.name }}</strong>
-        <p class="caption mt-8 clamp-1">{{ c.brokerage.intro }}</p>
+        <strong class="truncate">{{ c.org.name }}</strong>
+        <p class="caption mt-8 clamp-1">{{ c.org.intro }}</p>
         <div class="flex gap-8 center mt-8">
           {% if c.score %}
           {{ stars(c.score.overall) }}
@@ -87,23 +88,24 @@
       </div>
     </a>
     {% else %}
-    <div class="empty"><div class="display">还没有券商数据</div></div>
+    <div class="empty"><div class="display">还没有{{ cfg.org_label }}数据</div></div>
     {% endfor %}
   </div>
 </section>
 
-<p class="disclaimer mt-32">以上券商与团队均为虚构，评分与评价均为演示用虚拟数据，不代表任何真实机构。</p>
+<p class="disclaimer mt-32">以上{{ cfg.org_label }}与团队均为虚构，评分与评价均为演示用虚拟数据，不代表任何真实机构。</p>
 
 <div class="overlay" id="add-team-modal">
   <div class="modal">
-    <h2 class="h2">新增团队评分</h2>
-    <p class="caption mt-8">填券商名称 + 团队名称，并对三个维度都打 1-5 星，才能提交。如果券商还不存在，会自动建一个。</p>
+    <h2 class="h2">新增{{ cfg.team_label }}评分</h2>
+    <p class="caption mt-8">填{{ cfg.org_label }}名称 + 团队名称，并对三个维度都打 1-5 星，才能提交。如果{{ cfg.org_label }}还不存在，会自动建一个。</p>
+    <p class="demo-warn mt-8">本网站仅作为 Demo 演示使用，请勿使用真实机构名称</p>
     <div class="mt-16">
-      <label class="caption" for="new-brokerage-name">券商名称</label>
-      <input class="field mt-8" id="new-brokerage-name" list="brokerage-list" maxlength="32" autocomplete="off" placeholder="如：中信证券" />
-      <datalist id="brokerage-list">
-        {% for b in brokerages %}
-        <option value="{{ b.name }}"></option>
+      <label class="caption" for="new-org-name">{{ cfg.org_label }}名称</label>
+      <input class="field mt-8" id="new-org-name" list="org-list" maxlength="32" autocomplete="off" placeholder="下拉选择已有{{ cfg.org_label }}，或自己输入" />
+      <datalist id="org-list">
+        {% for o in orgs %}
+        <option value="{{ o.name }}"></option>
         {% endfor %}
       </datalist>
     </div>
@@ -112,20 +114,21 @@
       <input class="field mt-8" id="new-team-name" maxlength="32" autocomplete="off" placeholder="如：消费组" />
     </div>
     <div class="rate-rows mt-16">
-      {% for key, label in dimensions %}
+      {% for dkey, label in cfg.dims %}
       <div class="rate-row">
         <span class="caption rate-label">{{ label }}</span>
-        <span class="star-picker" data-dim="{{ key }}">
+        <span class="star-picker" data-dim="{{ dkey }}">
           {% for i in range(1, 6) %}
           <button type="button" class="star-btn" data-star="{{ i }}" aria-label="{{ label }} {{ i }} 星">★</button>
           {% endfor %}
         </span>
+        <span class="rate-grade" data-grade-for="{{ dkey }}"></span>
       </div>
       {% endfor %}
     </div>
     <div class="flex gap-12 mt-16">
       <button type="button" class="btn btn-ghost grow" data-close-add-team>取消</button>
-      <button type="button" class="btn btn-primary grow" data-submit-add-team>提交</button>
+      <button type="button" class="btn btn-primary grow" data-submit-add-team data-board="{{ key }}">提交</button>
     </div>
   </div>
 </div>

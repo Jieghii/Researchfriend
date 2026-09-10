@@ -3,11 +3,20 @@
 {% block title %}好友列表 · 研友{% endblock %}
 {% block content %}
 <div class="page-head">
-  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
-  <h1 class="h1">我的好友</h1>
+  <a class="back" href="{{ url_for('chat.inbox') }}">◀</a>
+  <h1 class="h1">通讯录</h1>
 </div>
+
+<a class="card list-row mb-16" href="{{ url_for('profile.requests_page') }}" style="padding:0 16px">
+  <span class="grow">新的研友</span>
+  {% if pending_new %}<span class="badge badge-unread">{{ pending_new }}</span>
+  {% elif pending_n %}<span class="caption">{{ pending_n }} 条待处理</span>
+  {% else %}<span class="caption">暂无新请求</span>{% endif %}
+  <span class="chev">›</span>
+</a>
+
 <form method="get" class="mb-16">
-  <input class="field" name="q" value="{{ q or '' }}" placeholder="按昵称搜索">
+  <input class="field" name="q" value="{{ q or '' }}" placeholder="按昵称搜索好友">
 </form>
 {% if not friends %}
 <div class="empty">

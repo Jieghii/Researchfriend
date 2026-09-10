@@ -17,7 +17,11 @@
     <textarea class="field mt-16" id="compose-body" maxlength="500" rows="6" placeholder="说说你的看法…"></textarea>
     <div class="counter mt-8" id="compose-count">0/500</div>
     <div class="flex wrap gap-8 mt-12" id="compose-tags"></div>
-    <button type="button" class="btn btn-ghost mt-12" id="pick-topic"># 话题</button>
+    <div class="flex gap-8 mt-8">
+      <input class="field grow" id="compose-tag-input" maxlength="16" placeholder="输入任意话题，回车添加（如：白酒、算力租赁）" autocomplete="off">
+    </div>
+    <p class="caption mt-8">也可以从下方选择你已有的话题</p>
+    <button type="button" class="btn btn-ghost mt-8" id="pick-topic"># 我的话题</button>
     <p class="caption mt-16">可见范围</p>
     <div class="vis-grid mt-8">
       <div class="vis-card on" data-vis="public" id="vis-public">所有人</div>

@@ -47,28 +47,49 @@
       qs("#compose-send").disabled = !body.value.trim();
     });
   }
+  // selectedTags: {id, name}（已有标签）或 {name}（自定义，无 id）
   var selectedTags = [];
+  var TAG_KEY = function (t) { return t.id ? "id:" + t.id : "n:" + t.name; };
+
+  function addTag(t) {
+    var key = TAG_KEY(t);
+    if (selectedTags.some(function (x) { return TAG_KEY(x) === key; })) return;
+    selectedTags.push(t);
+    renderSel();
+  }
+
   qs("#pick-topic") && qs("#pick-topic").addEventListener("click", function () {
     openModal("tagpick-modal");
   });
   qsa("[data-pick-tag]").forEach(function (el) {
     el.addEventListener("click", function () {
-      var id = el.getAttribute("data-pick-tag");
-      var name = el.getAttribute("data-name");
-      if (selectedTags.some(function (t) { return t.id == id; })) return;
-      selectedTags.push({ id: id, name: name });
-      renderSel();
+      addTag({ id: el.getAttribute("data-pick-tag"), name: el.getAttribute("data-name") });
     });
   });
+
+  // 自定义标签：输入任意话题名，回车即可添加
+  var tagInput = qs("#compose-tag-input");
+  if (tagInput) {
+    tagInput.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      var name = (tagInput.value || "").trim().replace(/^#/, "").trim();
+      if (!name) return;
+      addTag({ name: name });
+      tagInput.value = "";
+    });
+  }
+
   function renderSel() {
     var box = qs("#compose-tags");
     if (!box) return;
     box.innerHTML = selectedTags.map(function (t) {
-      return '<span class="pill common x" data-rm="' + t.id + '">#' + t.name + " ×</span>";
+      return '<span class="pill common x" data-rm="' + TAG_KEY(t) + '">#' + t.name + " ×</span>";
     }).join(" ");
     qsa("[data-rm]", box).forEach(function (p) {
       p.addEventListener("click", function () {
-        selectedTags = selectedTags.filter(function (t) { return t.id != p.getAttribute("data-rm"); });
+        var key = p.getAttribute("data-rm");
+        selectedTags = selectedTags.filter(function (t) { return TAG_KEY(t) !== key; });
         renderSel();
       });
     });
@@ -78,12 +99,17 @@
     var btn = qs("#compose-send");
     btn.disabled = true;
     btn.classList.add("loading");
+    var tagIds = [], tagNames = [];
+    selectedTags.forEach(function (t) {
+      if (t.id) { tagIds.push(parseInt(t.id, 10)); } else { tagNames.push(t.name); }
+    });
     api("/api/thoughts", {
       method: "POST",
       body: JSON.stringify({
         body: body.value,
         visibility: lastVis,
-        tag_ids: selectedTags.map(function (t) { return t.id; })
+        tag_ids: tagIds,
+        tag_names: tagNames
       })
     }).then(function (data) {
       btn.classList.remove("loading");

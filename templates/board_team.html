@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 {% from "macros.html" import stars %}
-{% block title %}{{ team.name }} · 玻璃球点评{% endblock %}
+{% block title %}{{ team.name }} · {{ cfg.title }}{% endblock %}
 {% block content %}
-<a class="caption" href="{{ url_for('glass.brokerage_detail', brokerage_id=brokerage.id) }}">‹ 返回 {{ brokerage.name }}</a>
+<a class="caption" href="{{ url_for('glass.org_detail', key=key, org_id=org.id) }}">‹ 返回 {{ org.name }}</a>
 
 <section class="card mt-8" style="padding:24px">
   <h1 class="h1">{{ team.name }}</h1>
-  <p class="caption mt-8">{{ brokerage.name }} · {{ team.intro }}</p>
+  <p class="caption mt-8">{{ org.name }} · {{ team.intro }}</p>
 
   {% if score %}
   <div class="flex gap-24 center mt-24 wrap">
     <div class="score-box">
       <div class="numeric-l">{{ score.overall }}</div>
       {{ stars(score.overall) }}
-      <div class="caption mt-8">{{ score.count }} 位买方打分</div>
+      <div class="caption mt-8">{{ score.count }} 位{{ cfg.rater_label }}打分</div>
     </div>
     <div class="dim-grid grow">
-      {% for key, label in dimensions %}
+      {% for dkey, label in cfg.dims %}
       <div class="dim-item">
         <div class="flex between center">
           <span class="caption">{{ label }}</span>
-          <span class="mono">{{ score[key] }}</span>
+          <span class="mono">{{ score.vals[dkey] }}</span>
         </div>
-        {{ stars(score[key]) }}
+        {{ stars(score.vals[dkey]) }}
       </div>
       {% endfor %}
     </div>
@@ -31,45 +31,46 @@
   <p class="caption mt-16">还没有人打分，成为第一个吧。</p>
   {% endif %}
 
-  {% if current_user.role == 'buyer' %}
+  {% if can_rate %}
   <div class="rate-box mt-24">
     <p class="caption">你的打分{% if mine %}（已提交，可修改）{% endif %}</p>
     <div class="rate-rows mt-8">
-      {% for key, label in dimensions %}
+      {% for dkey, label in cfg.dims %}
       <div class="rate-row">
         <span class="caption rate-label">{{ label }}</span>
-        <span class="star-picker" data-dim="{{ key }}">
+        <span class="star-picker" data-dim="{{ dkey }}">
           {% for i in range(1, 6) %}
-          <button type="button" class="star-btn {% if mine and mine[key] >= i %}on{% endif %}" data-star="{{ i }}" aria-label="{{ label }} {{ i }} 星">★</button>
+          <button type="button" class="star-btn {% if mine and mine[dkey] and mine[dkey] >= i %}on{% endif %}" data-star="{{ i }}" aria-label="{{ label }} {{ i }} 星">★</button>
           {% endfor %}
         </span>
+        <span class="rate-grade" data-grade-for="{{ dkey }}">{% if mine and mine[dkey] %}{{ star_labels[mine[dkey]] }}{% endif %}</span>
       </div>
       {% endfor %}
     </div>
-    <button type="button" class="btn btn-primary mt-16" data-submit-rate data-team="{{ team.id }}">提交打分</button>
+    <button type="button" class="btn btn-primary mt-16" data-submit-rate data-team="{{ team.id }}" data-board="{{ key }}">提交打分</button>
   </div>
   {% else %}
-  <p class="caption mt-24">仅买方用户可以打分。</p>
+  <p class="caption mt-24">仅{{ cfg.rater_label }}用户可以打分。</p>
   {% endif %}
 </section>
 
 <section class="mt-32">
   <div class="flex between center">
     <h2 class="h2">评价（{{ reviews|length }}）</h2>
-    {% if current_user.role == 'buyer' %}
+    {% if can_rate %}
     <button type="button" class="btn btn-primary" data-open-review>匿名评价</button>
     {% else %}
     <button type="button" class="btn btn-ghost" data-seller-deny>匿名评价</button>
     {% endif %}
   </div>
-  <p class="caption mt-8">仅买方用户可以发表评价，评价以匿名方式展示。</p>
+  <p class="caption mt-8">仅{{ cfg.rater_label }}用户可以发表评价，评价以匿名方式展示。</p>
 
   <div class="mt-16" id="review-list">
     {% for r in reviews %}
     <div class="card review-card" data-review="{{ r.id }}">
       <div class="review-head">
         <span class="avatar-mini">匿</span>
-        <span class="caption">匿名买方用户 · {{ r.created_at }}</span>
+        <span class="caption">匿名{{ cfg.rater_label }}用户 · {{ r.created_at }}</span>
       </div>
       <p class="mt-8">{{ r.content }}</p>
       <div class="flex gap-16 center mt-12">
@@ -78,7 +79,7 @@
       </div>
     </div>
     {% else %}
-    <div class="empty"><div class="display">还没有评价</div><p class="caption mt-8">买方用户可以来发第一条</p></div>
+    <div class="empty"><div class="display">还没有评价</div><p class="caption mt-8">{{ cfg.rater_label }}用户可以来发第一条</p></div>
     {% endfor %}
   </div>
 </section>
@@ -86,11 +87,11 @@
 <div class="overlay" id="review-modal">
   <div class="modal">
     <h2 class="h2">匿名评价 · {{ team.name }}</h2>
-    <p class="caption mt-8">以匿名方式发布，其他用户只能看到「匿名买方用户」</p>
-    <textarea class="field mt-16" id="review-input" rows="4" maxlength="300" placeholder="说说研究能力、服务响应、派点性价比…"></textarea>
+    <p class="caption mt-8">以匿名方式发布，其他用户只能看到「匿名{{ cfg.rater_label }}用户」</p>
+    <textarea class="field mt-16" id="review-input" rows="4" maxlength="300" placeholder="说说你的真实感受…"></textarea>
     <div class="flex gap-12 mt-16">
       <button type="button" class="btn btn-ghost grow" data-close-review>取消</button>
-      <button type="button" class="btn btn-primary grow" data-submit-review data-target-type="team" data-target-id="{{ team.id }}">发布</button>
+      <button type="button" class="btn btn-primary grow" data-submit-review data-target-type="team" data-target-id="{{ team.id }}" data-board="{{ key }}">发布</button>
     </div>
   </div>
 </div>

@@ -1,10 +1,18 @@
-/* 玻璃球点评：打分、匿名评价、点赞 / 点踩 */
+/* 排行榜（旧财富排名 / 铁牛奖）：打分、匿名评价、点赞 / 点踩 */
 (function () {
-  // 星级选择
-  qsa(".star-picker").forEach(function (picker) {
+  // 1-5 星对应评级
+  var STAR_LABELS = { 1: "夯", 2: "很夯", 3: "非常夯", 4: "超级夯", 5: "夯爆了" };
+
+  function paintGrade(dim, v) {
+    var el = qs('[data-grade-for="' + dim + '"]');
+    if (el) el.textContent = v ? STAR_LABELS[v] || "" : "";
+  }
+
+  function bindPicker(picker) {
     var dim = picker.getAttribute("data-dim");
     var saved = qsa(".star-btn.on", picker).length;
     picker.setAttribute("data-value", saved || 0);
+    if (saved) paintGrade(dim, saved);
     qsa(".star-btn", picker).forEach(function (btn) {
       btn.addEventListener("click", function () {
         var v = parseInt(btn.getAttribute("data-star"), 10);
@@ -13,14 +21,19 @@
           var bv = parseInt(b.getAttribute("data-star"), 10);
           b.classList.toggle("on", bv <= v);
         });
+        // 需求：点星后在该行右侧显示对应评级
+        paintGrade(dim, v);
       });
     });
-  });
+  }
+
+  qsa(".star-picker").forEach(bindPicker);
 
   var rateBtn = qs("[data-submit-rate]");
   if (rateBtn) {
     rateBtn.addEventListener("click", function () {
       var teamId = rateBtn.getAttribute("data-team");
+      var board = rateBtn.getAttribute("data-board") || "wealth";
       var payload = {};
       var ok = true;
       qsa(".star-picker").forEach(function (p) {
@@ -29,7 +42,7 @@
         payload[p.getAttribute("data-dim")] = v;
       });
       if (!ok) return showToast("三个维度都要打分哦");
-      api("/api/glass/team/" + teamId + "/rate", {
+      api("/api/board/" + board + "/team/" + teamId + "/rate", {
         method: "POST",
         body: JSON.stringify(payload),
       }).then(function (r) {
@@ -43,15 +56,15 @@
     });
   }
 
-  // 卖家点击评价 / 新增团队按钮
+  // 无权限用户点击评价 / 新增团队按钮
   qsa("[data-seller-deny]").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      showToast("仅买方用户可以评价");
+      showToast(btn.getAttribute("data-tip") || "你当前身份没有该操作权限");
     });
   });
   qsa("[data-seller-deny-add]").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      showToast("仅买方用户可以新增团队评分");
+      showToast(btn.getAttribute("data-tip") || "你当前身份没有该操作权限");
     });
   });
 
@@ -68,7 +81,8 @@
       var input = qs("#review-input");
       var content = (input.value || "").trim();
       if (!content) return showToast("先写点什么再发布");
-      api("/api/glass/review", {
+      var board = submitBtn.getAttribute("data-board") || "wealth";
+      api("/api/board/" + board + "/review", {
         method: "POST",
         body: JSON.stringify({
           target_type: submitBtn.getAttribute("data-target-type"),
@@ -93,7 +107,7 @@
     qsa("[data-vote]", card).forEach(function (btn) {
       btn.addEventListener("click", function () {
         var value = parseInt(btn.getAttribute("data-vote"), 10);
-        api("/api/glass/review/" + rid + "/vote", {
+        api("/api/board/review/" + rid + "/vote", {
           method: "POST",
           body: JSON.stringify({ value: value }),
         }).then(function (r) {
@@ -108,9 +122,7 @@
             if (d) d.textContent = r.downs;
           } else {
             var su = qs("[data-ups]", card);
-            var sd = qs("[data-downs]", card);
             if (su) su.textContent = Math.max(0, parseInt(su.textContent, 10) + (r.my_vote === 0 ? -1 : 1));
-            if (sd) sd.textContent = Math.max(0, parseInt(sd.textContent, 10) + (r.my_vote === 0 ? -1 : 0));
             if (r.my_vote === 0) location.reload();
           }
         });
@@ -118,7 +130,7 @@
     });
   });
 
-  // ===== 玻璃球首页：新增团队评分弹窗 =====
+  // ===== 榜单首页：新增团队评分弹窗 =====
   var openAdd = qs("[data-open-add-team]");
   if (openAdd) openAdd.addEventListener("click", function () { openModal("add-team-modal"); });
   qsa("[data-close-add-team]").forEach(function (b) {
@@ -128,11 +140,11 @@
   var submitAdd = qs("[data-submit-add-team]");
   if (submitAdd) {
     submitAdd.addEventListener("click", function () {
-      var brokerageInput = qs("#new-brokerage-name");
+      var orgInput = qs("#new-org-name");
       var teamInput = qs("#new-team-name");
-      var brokerageName = (brokerageInput.value || "").trim();
+      var orgName = (orgInput.value || "").trim();
       var teamName = (teamInput.value || "").trim();
-      if (!brokerageName) { showToast("请填写券商名称"); return; }
+      if (!orgName) { showToast("请填写机构名称"); return; }
       if (!teamName) { showToast("请填写团队名称"); return; }
       var payload = {};
       var ok = true;
@@ -142,10 +154,11 @@
         payload[p.getAttribute("data-dim")] = v;
       });
       if (!ok) { showToast("三个维度都要打分哦"); return; }
-      payload.brokerage_name = brokerageName;
+      payload.org_name = orgName;
       payload.team_name = teamName;
+      var board = submitAdd.getAttribute("data-board") || "wealth";
       submitAdd.disabled = true;
-      api("/api/glass/team/create", {
+      api("/api/board/" + board + "/team/create", {
         method: "POST",
         body: JSON.stringify(payload),
       }).then(function (r) {

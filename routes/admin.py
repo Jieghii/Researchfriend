@@ -16,12 +16,15 @@ from flask import (
 from codes import gen_invite_code
 from extensions import db
 from models import (
+    AdminNotice,
     Brokerage,
     Feedback,
     InviteCode,
     ResearchTeam,
     Review,
+    ReviewVote,
     Thought,
+    ThoughtTag,
     User,
 )
 from services import relative_time
@@ -249,3 +252,153 @@ def toggle_invite(cid):
     c.is_active = not c.is_active
     db.session.commit()
     return jsonify({"ok": True, "active": c.is_active})
+
+
+# ---------- 内容管理（删除随想 / 评价，附带理由通知用户） ----------
+@bp.route("/content")
+@admin_required
+def content():
+    thoughts = (
+        Thought.query.order_by(Thought.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    reviews = (
+        Review.query.order_by(Review.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    t_users = {u.id: u for u in User.query.filter(User.id.in_({t.author_id for t in thoughts} or {0})).all()}
+    r_users = {u.id: u for u in User.query.filter(User.id.in_({r.author_id for r in reviews} or {0})).all()}
+    org_map = {o.id: o for o in Brokerage.query.all()}
+    team_map = {t.id: t for t in ResearchTeam.query.all()}
+
+    t_view = []
+    for t in thoughts:
+        u = t_users.get(t.author_id)
+        t_view.append(
+            {
+                "id": t.id,
+                "nickname": u.nickname if u else "已注销",
+                "body": (t.body or "")[:120],
+                "time": relative_time(t.created_at),
+            }
+        )
+    r_view = []
+    for r in reviews:
+        u = r_users.get(r.author_id)
+        if r.target_type == "brokerage":
+            label = org_map.get(r.target_id)
+            label = f"机构「{label.name}」" if label else "机构"
+        else:
+            label = team_map.get(r.target_id)
+            label = f"团队「{label.name}」" if label else "团队"
+        r_view.append(
+            {
+                "id": r.id,
+                "nickname": u.nickname if u else "已注销",
+                "target": label,
+                "content": (r.content or "")[:120],
+                "time": relative_time(r.created_at),
+            }
+        )
+    return render_template("admin/content.html", thoughts=t_view, reviews=r_view)
+
+
+# ---------- 机构与团队管理（改名） ----------
+@bp.route("/orgs")
+@admin_required
+def orgs():
+    groups = []
+    for kind, label in (("brokerage", "券商"), ("buyside", "买方机构")):
+        rows = Brokerage.query.filter_by(kind=kind).order_by(Brokerage.id).all()
+        items = []
+        for o in rows:
+            teams = ResearchTeam.query.filter_by(brokerage_id=o.id).order_by(ResearchTeam.id).all()
+            items.append({"org": o, "teams": teams})
+        groups.append({"kind": kind, "label": label, "items": items})
+    return render_template("admin/orgs.html", groups=groups)
+
+
+@bp.route("/api/orgs/<int:oid>/rename", methods=["POST"])
+@admin_required
+def rename_org(oid):
+    o = Brokerage.query.get_or_404(oid)
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "名称不能为空"}), 400
+    if len(name) > 32:
+        return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
+    dup = Brokerage.query.filter(Brokerage.name == name, Brokerage.id != o.id).first()
+    if dup:
+        return jsonify({"ok": False, "error": "已存在同名机构"}), 400
+    o.name = name
+    o.short_name = name[:2]
+    db.session.commit()
+    return jsonify({"ok": True, "name": o.name})
+
+
+@bp.route("/api/teams/<int:tid>/rename", methods=["POST"])
+@admin_required
+def rename_team(tid):
+    t = ResearchTeam.query.get_or_404(tid)
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "名称不能为空"}), 400
+    if len(name) > 32:
+        return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
+    t.name = name
+    db.session.commit()
+    return jsonify({"ok": True, "name": t.name})
+
+
+# ---------- 删除随想 / 评价（附带理由通知用户） ----------
+@bp.route("/api/thoughts/<int:tid>/delete", methods=["POST"])
+@admin_required
+def delete_thought(tid):
+    th = Thought.query.get_or_404(tid)
+    data = request.get_json(force=True, silent=True) or {}
+    reason = (data.get("reason") or "").strip()[:300]
+    snippet = (th.body or "")[:100]
+    author_id = th.author_id
+    db.session.add(
+        AdminNotice(
+            user_id=author_id,
+            kind="thought_deleted",
+            title="你的一条随想已被管理员删除",
+            reason=reason,
+            snippet=snippet,
+        )
+    )
+    from models import Comment, Like
+
+    Like.query.filter_by(thought_id=tid).delete()
+    Comment.query.filter_by(thought_id=tid).delete()
+    ThoughtTag.query.filter_by(thought_id=tid).delete()
+    db.session.delete(th)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/api/reviews/<int:rid>/delete", methods=["POST"])
+@admin_required
+def delete_review(rid):
+    r = Review.query.get_or_404(rid)
+    data = request.get_json(force=True, silent=True) or {}
+    reason = (data.get("reason") or "").strip()[:300]
+    target_label = "机构" if r.target_type == "brokerage" else "团队"
+    db.session.add(
+        AdminNotice(
+            user_id=r.author_id,
+            kind="review_deleted",
+            title=f"你对{target_label}的一条评价已被管理员删除",
+            reason=reason,
+            snippet=(r.content or "")[:100],
+        )
+    )
+    ReviewVote.query.filter_by(review_id=rid).delete()
+    db.session.delete(r)
+    db.session.commit()
+    return jsonify({"ok": True})

@@ -68,8 +68,17 @@ def inject_globals():
     pending = 0
     my_tags = []
     chat_unread = 0
+    new_request = 0
+    admin_notice = 0
     if user:
         pending = FriendRequest.query.filter_by(to_user_id=user.id, status="pending").count()
+        # 未读的新好友请求：聊天页「通讯录」+ 通讯录页「新的研友」小红点
+        new_request = FriendRequest.query.filter_by(
+            to_user_id=user.id, status="pending", is_seen=False
+        ).count()
+        from models import AdminNotice
+
+        admin_notice = AdminNotice.query.filter_by(user_id=user.id, is_read=False).count()
         my_tags = Tag.query.join(UserTag, UserTag.tag_id == Tag.id).filter(UserTag.user_id == user.id).all()
         # 计算所有会话的未读消息总数（对方发给我的、未读）
         friend_convs = (
@@ -93,6 +102,8 @@ def inject_globals():
         "current_user": user,
         "avatar_index": avatar_index(user.nickname) if user else 0,
         "pending_count": pending,
+        "new_request": new_request,
+        "admin_notice": admin_notice,
         "chat_unread": chat_unread,
         "preset_industries": PRESET_INDUSTRIES,
         "preset_stocks": PRESET_STOCKS,

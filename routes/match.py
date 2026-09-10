@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, render_template, request, session
 from extensions import db
 from models import FriendRequest, Skip, User
 from routes.auth import current_user
-from services import card_payload, now_utc, recommend_candidates, tag_ids_of
+from services import add_exp, card_payload, now_utc, recommend_candidates, tag_ids_of
 
 bp = Blueprint("match", __name__)
 
@@ -58,5 +58,9 @@ def greet():
     db.session.add(
         FriendRequest(from_user_id=me.id, to_user_id=uid, greeting=text, status="pending", created_at=now_utc())
     )
+    # 被别人标注为喜欢：接收方 +3 修炼值
+    target = User.query.get(uid)
+    if target:
+        add_exp(target, "liked", ref_id=me.id, desc="被标注为喜欢")
     db.session.commit()
     return jsonify({"ok": True})

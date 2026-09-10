@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}修炼境界说明 · 研友{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.realm_page') }}">◀</a>
+  <h1 class="h1">修炼境界说明</h1>
+</div>
+<p class="caption mb-16">初始境界为闻弦境大佬（修炼值 0）。升级门槛依次为 10、50、250、1250……每级为前一级的 5 倍。</p>
+
+<section class="card" style="padding:0;overflow:hidden">
+  <div class="realm-table">
+    <div class="realm-tr head">
+      <span>境界</span><span>门槛</span><span>每日随想</span><span>邀请码</span>
+    </div>
+    {% for r in rows %}
+    <div class="realm-tr {% if r.mine %}mine{% elif r.passed %}passed{% endif %}">
+      <span>
+        {{ r.full }}
+        {% if r.mine %}<span class="pill common">当前</span>{% endif %}
+      </span>
+      <span class="mono">{{ r.threshold }}</span>
+      <span class="mono">{{ r.daily_thoughts }} 条</span>
+      <span class="mono">{{ r.invites }} 个</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">境界权力</h2>
+  <div class="card mt-16" style="padding:20px">
+    <p class="caption"><strong>每日发布随想数量</strong>：闻弦境 5 条、鸣骨境 10 条、成丹境 20 条，之后每提升一个境界增加 20 条。</p>
+    <p class="caption mt-12"><strong>邀请码数量</strong>：闻弦境 1 个，每提升一个境界增加 1 个。</p>
+  </div>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">修炼值获得方法</h2>
+  <div class="card mt-16" style="padding:0">
+    {% for r in rules %}
+    <div class="list-row" style="padding:14px 16px">
+      <span class="grow">
+        <strong>{{ r.desc }}</strong>
+        <span class="caption" style="display:block;margin-top:4px">{{ r.detail }}</span>
+      </span>
+      <span class="numeric mono exp-plus">+{{ r.amount }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

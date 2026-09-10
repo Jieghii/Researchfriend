@@ -16,7 +16,7 @@ from codes import gen_invite_code
 from extensions import db
 from mailer import send_reset_email
 from models import InviteCode, PasswordResetToken, User
-from services import YEAR_OPTIONS, now_utc
+from services import YEAR_OPTIONS, add_exp, now_utc
 
 bp = Blueprint("auth", __name__)
 
@@ -92,6 +92,8 @@ def register():
     if current_user():
         return redirect(url_for("match.page"))
 
+    # 从专属邀请链接进来时预填邀请码
+    preset_code = (request.args.get("code") or "").strip().upper()
     error = None
     if request.method == "POST":
         nickname = (request.form.get("nickname") or "").strip()
@@ -140,13 +142,18 @@ def register():
                     max_uses=5,
                 )
                 db.session.add(own)
+                # 邀请人 +5 修炼值
+                if invite.owner_user_id:
+                    owner = User.query.get(invite.owner_user_id)
+                    if owner:
+                        add_exp(owner, "invite", ref_id=user.id, desc=f"邀请了 {user.nickname}")
                 db.session.commit()
                 session.clear()
                 session["uid"] = user.id
                 session.permanent = False
                 return redirect(url_for("auth.onboard"))
 
-    return render_template("register.html", error=error, form=request.form)
+    return render_template("register.html", error=error, form=request.form, preset_code=preset_code)
 
 
 @bp.route("/forgot-password", methods=["GET", "POST"])

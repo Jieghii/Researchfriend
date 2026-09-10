@@ -20,6 +20,16 @@ class User(db.Model):
     invite_code_id = db.Column(db.Integer, db.ForeignKey("invite_codes.id"))
     # 是否被封禁（管理后台用）
     is_banned = db.Column(db.Boolean, default=False)
+    # 修炼值（决定境界与权限）
+    exp = db.Column(db.Integer, nullable=False, default=0)
+    # 个人资料（身份/年限）上次修改时间：一个月只能改一次
+    profile_updated_at = db.Column(db.DateTime)
+
+    @property
+    def realm(self):
+        from services import realm_of
+
+        return realm_of(self.exp or 0)
 
 
 class InviteCode(db.Model):
@@ -60,7 +70,8 @@ class PasswordResetToken(db.Model):
 
 
 class Brokerage(db.Model):
-    """券商（玻璃球点评）。均为虚构机构，非真实信息。"""
+    """机构。kind=brokerage 为券商（旧财富排名），kind=buyside 为买方机构（铁牛奖）。
+    均为虚构机构，非真实信息。"""
 
     __tablename__ = "brokerages"
     id = db.Column(db.Integer, primary_key=True)
@@ -68,30 +79,40 @@ class Brokerage(db.Model):
     short_name = db.Column(db.String(16))
     intro = db.Column(db.String(200))
     hue = db.Column(db.Integer, default=0)  # 头像色块色相
+    # brokerage=券商（卖方，旧财富排名）；buyside=买方机构（铁牛奖）
+    kind = db.Column(db.String(16), nullable=False, default="brokerage", index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class ResearchTeam(db.Model):
-    """券商下属研究团队。"""
+    """机构下属团队。kind 与所属机构一致。"""
 
     __tablename__ = "research_teams"
     id = db.Column(db.Integer, primary_key=True)
     brokerage_id = db.Column(db.Integer, db.ForeignKey("brokerages.id"), nullable=False, index=True)
     name = db.Column(db.String(32), nullable=False)
     intro = db.Column(db.String(200))
+    kind = db.Column(db.String(16), nullable=False, default="brokerage", index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class TeamRating(db.Model):
-    """买方用户对研究团队的三维打分：研究能力 / 服务能力 / 钞能力（各 1-5 星）。"""
+    """团队三维打分。
+
+    - 旧财富排名（kind=brokerage，买方打分）：research 研究能力 / service 服务能力 / capital 钞能力
+    - 铁牛奖（kind=buyside，卖方打分）：invest 投资能力 / gratitude 知恩图报 / affinity 亲和力
+    """
 
     __tablename__ = "team_ratings"
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey("research_teams.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    research = db.Column(db.Integer, nullable=False)  # 研究能力 1-5
-    service = db.Column(db.Integer, nullable=False)  # 服务能力 1-5
-    capital = db.Column(db.Integer, nullable=False)  # 钞能力 1-5
+    research = db.Column(db.Integer)  # 研究能力 1-5（旧财富）
+    service = db.Column(db.Integer)  # 服务能力 1-5（旧财富）
+    capital = db.Column(db.Integer)  # 钞能力 1-5（旧财富）
+    invest = db.Column(db.Integer)  # 投资能力 1-5（铁牛奖）
+    gratitude = db.Column(db.Integer)  # 知恩图报 1-5（铁牛奖）
+    affinity = db.Column(db.Integer)  # 亲和力 1-5（铁牛奖）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint("team_id", "user_id"),)
 
@@ -170,6 +191,8 @@ class FriendRequest(db.Model):
     status = db.Column(db.String(16), nullable=False, default="pending", index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     responded_at = db.Column(db.DateTime)
+    # 收件人是否已查看（用于「新的研友」小红点：打开请求页即清零）
+    is_seen = db.Column(db.Boolean, default=False)
 
 
 class Friendship(db.Model):
@@ -242,3 +265,34 @@ class Comment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     content = db.Column(db.String(300), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ExpLog(db.Model):
+    """修炼值流水。每次获得修炼值记一条，用于「今日修炼进展」。
+
+    kind: thought(发布随想) / like(被点赞) / liked(被标为喜欢) / invite(邀请成功)
+    """
+
+    __tablename__ = "exp_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    amount = db.Column(db.Integer, nullable=False)
+    kind = db.Column(db.String(16), nullable=False, index=True)
+    desc = db.Column(db.String(80))
+    ref_id = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+class AdminNotice(db.Model):
+    """管理员操作通知（删除随想 / 删除评价时附理由，以对话形式发给用户）。"""
+
+    __tablename__ = "admin_notices"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    # thought_deleted / review_deleted
+    kind = db.Column(db.String(24), nullable=False)
+    title = db.Column(db.String(80), nullable=False)
+    reason = db.Column(db.String(300))
+    snippet = db.Column(db.String(200))  # 被删内容的摘要
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    is_read = db.Column(db.Boolean, default=False)

@@ -1,22 +1,36 @@
 {% extends "base.html" %}
-{% block title %}邀请码 · 研友{% endblock %}
+{% block title %}邀请新研友 · 研友{% endblock %}
 {% block content %}
-<h1 class="h1">邀请码</h1>
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">邀请新研友</h1>
+</div>
+<p class="caption mb-16">当前境界可拥有 {{ quota }} 个邀请码，每个邀请码最多可邀请 5 人。把专属链接发给朋友，注册时会自动填好邀请码。</p>
 
+{% for c in code_cards %}
 <section class="card mt-16" style="padding:24px">
-  <h2 class="h2">我的邀请码</h2>
-  <div class="my-code mt-16">
-    <code id="my-code-text">{{ my_code.code }}</code>
-    <button type="button" class="btn btn-ghost" id="copy-code">复制</button>
+  <div class="flex between center wrap" style="gap:8px">
+    <h2 class="h2">邀请码 {{ loop.index }}</h2>
+    <span class="caption">已使用 {{ c.used }} / {{ c.code.max_uses }}，剩余 {{ c.left }} 个名额</span>
   </div>
-  <p class="caption mt-12">
-    每人的邀请码最多可邀请 <b>{{ my_code.max_uses }}</b> 人，
-    已使用 <b>{{ used }}</b> 个名额，剩余 <b>{{ left }}</b> 个。
-  </p>
+
+  <div class="my-code mt-16">
+    <code>{{ c.code.code }}</code>
+    <button type="button" class="btn btn-ghost" data-copy="{{ c.code.code }}">复制邀请码</button>
+  </div>
+
+  <div class="mt-16">
+    <label class="caption">专属邀请链接</label>
+    <div class="invite-link mt-8">
+      <input class="field" value="{{ c.link }}" readonly id="link-{{ c.code.id }}">
+      <button type="button" class="btn btn-primary" data-copy-link="#link-{{ c.code.id }}">复制链接</button>
+    </div>
+    <p class="caption mt-8">朋友点开这个链接注册时，邀请码会自动填好。</p>
+  </div>
 
   <h3 class="h2 mt-24">使用情况</h3>
   <ul class="invite-slots mt-12">
-    {% for s in slots %}
+    {% for s in c.slots %}
     <li class="{% if s.used %}used{% endif %}">
       <span class="slot-idx">{{ loop.index }}</span>
       {% if s.used %}
@@ -28,8 +42,8 @@
     </li>
     {% endfor %}
   </ul>
-  <p class="caption mt-12">邀请码使用后，会在这里标注对应受邀请注册的用户的昵称。</p>
 </section>
+{% endfor %}
 
 <section class="card mt-16" style="padding:24px">
   <h2 class="h2">我是谁邀请来的</h2>
@@ -46,15 +60,29 @@
 {% block scripts %}
 <script>
 (function () {
-  var btn = document.getElementById("copy-code");
-  if (!btn) return;
-  btn.addEventListener("click", function () {
-    var text = (document.getElementById("my-code-text") || {}).textContent || "";
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(function () { showToast("邀请码已复制", "success"); });
+  function copy(text, msg) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () { showToast(msg, "success"); });
     } else {
-      showToast("请手动复制");
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); showToast(msg, "success"); }
+      catch (e) { showToast("请手动复制"); }
+      document.body.removeChild(ta);
     }
+  }
+  qsa("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () { copy(btn.getAttribute("data-copy"), "邀请码已复制"); });
+  });
+  qsa("[data-copy-link]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var input = qs(btn.getAttribute("data-copy-link"));
+      copy(input ? input.value : "", "邀请链接已复制");
+    });
   });
 })();
 </script>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}系统通知 · 研友{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">系统通知</h1>
+</div>
+
+{% if rows %}
+<div class="notice-thread mt-16">
+  {% for n in rows %}
+  <div class="notice-item">
+    <div class="notice-avatar">管</div>
+    <div class="notice-body">
+      <div class="notice-bubble">
+        <div class="notice-title">{{ n.title }}</div>
+        {% if n.snippet %}
+        <div class="notice-snippet">「{{ n.snippet }}{% if n.snippet|length >= 100 %}…{% endif %}」</div>
+        {% endif %}
+        {% if n.reason %}
+        <div class="notice-reason">删除理由：{{ n.reason }}</div>
+        {% else %}
+        <div class="notice-reason caption">管理员未填写删除理由</div>
+        {% endif %}
+      </div>
+      <div class="caption mt-8">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty mt-32">
+  <div class="display">暂无系统通知</div>
+  <p class="caption mt-8">管理员删除你的内容时，会在这里说明理由</p>
+</div>
+{% endif %}
+{% endblock %}

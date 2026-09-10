@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}{{ title }} · 研友{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">{{ title }}（{{ cards|length }}）</h1>
+</div>
+
+{% if cards %}
+<div class="card mt-8" style="padding:0">
+  {% for u in cards %}
+  <a class="list-row" href="/users/{{ u.id }}" style="padding:12px 16px">
+    {{ avatar(u.avatar, u.nickname[:1]) }}
+    <div class="grow" style="min-width:0">
+      <div class="flex gap-8 center">
+        <strong class="truncate">{{ u.nickname }}</strong>
+        <span class="role-chip {% if u.role=='买方' %}buyer{% endif %}">{{ u.role }}{% if u.years %} · {{ u.years }}{% endif %}</span>
+      </div>
+      <div class="caption truncate">{{ u.status }}</div>
+    </div>
+    <span class="caption nowrap">{{ u.at }}</span>
+    <span class="chev">›</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty mt-32">
+  <div class="display">{{ empty_text }}</div>
+  <a class="btn btn-primary mt-16" href="{{ url_for('match.page') }}">去找研友</a>
+</div>
+{% endif %}
+{% endblock %}

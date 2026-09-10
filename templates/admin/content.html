@@ -1,0 +1,94 @@
+{% extends "admin/base.html" %}
+{% block title %}内容管理 · 研友管理后台{% endblock %}
+{% block content %}
+<h1 class="h1">内容管理</h1>
+<p class="caption mt-8">删除用户随想或评价时需填写理由，理由会以对话形式发送给该用户。</p>
+
+<section class="mt-32">
+  <h2 class="h2">随想（{{ thoughts|length }}）</h2>
+  {% for t in thoughts %}
+  <div class="card mt-12" style="padding:14px">
+    <div class="flex between center wrap" style="gap:8px">
+      <div style="min-width:0">
+        <strong>{{ t.nickname }}</strong>
+        <span class="caption"> · {{ t.time }}</span>
+        <p class="mt-8" style="color:var(--text-mid)">{{ t.body }}</p>
+      </div>
+      <button type="button" class="btn btn-danger" data-del-thought="{{ t.id }}" data-snippet="{{ t.body }}">删除</button>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty mt-12"><div class="display">没有随想</div></div>
+  {% endfor %}
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">评价（{{ reviews|length }}）</h2>
+  {% for r in reviews %}
+  <div class="card mt-12" style="padding:14px">
+    <div class="flex between center wrap" style="gap:8px">
+      <div style="min-width:0">
+        <strong>{{ r.nickname }}</strong>
+        <span class="caption"> · {{ r.time }} · {{ r.target }}</span>
+        <p class="mt-8" style="color:var(--text-mid)">{{ r.content }}</p>
+      </div>
+      <button type="button" class="btn btn-danger" data-del-review="{{ r.id }}" data-snippet="{{ r.content }}">删除</button>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty mt-12"><div class="display">没有评价</div></div>
+  {% endfor %}
+</section>
+
+<div class="overlay" id="del-modal">
+  <div class="modal">
+    <h2 class="h2">删除并通知用户</h2>
+    <p class="caption mt-8">删除理由会以对话形式发送给作者，建议填写清楚。</p>
+    <textarea class="field mt-16" id="del-reason" rows="3" maxlength="300" placeholder="例如：内容涉及违规 / 与真实机构无关的演示数据……"></textarea>
+    <div class="flex gap-12 mt-16">
+      <button type="button" class="btn btn-ghost grow" id="del-cancel">取消</button>
+      <button type="button" class="btn btn-danger grow" id="del-confirm">确认删除</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var target = null; // {type:'thought'|'review', id: n}
+  var modal = qs("#del-modal");
+  function openDel(type, id, snippet) {
+    target = { type: type, id: id };
+    qs("#del-reason").value = "";
+    openModal("del-modal");
+  }
+  qsa("[data-del-thought]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      openDel("thought", b.getAttribute("data-del-thought"), b.getAttribute("data-snippet"));
+    });
+  });
+  qsa("[data-del-review]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      openDel("review", b.getAttribute("data-del-review"), b.getAttribute("data-snippet"));
+    });
+  });
+  qs("#del-cancel").addEventListener("click", function () { closeModal("del-modal"); });
+  qs("#del-confirm").addEventListener("click", function () {
+    if (!target) return;
+    var reason = qs("#del-reason").value.trim();
+    var url = target.type === "thought"
+      ? "/admin/api/thoughts/" + target.id + "/delete"
+      : "/admin/api/reviews/" + target.id + "/delete";
+    api(url, { method: "POST", body: JSON.stringify({ reason: reason }) }).then(function (r) {
+      if (r.ok) {
+        closeModal("del-modal");
+        showToast("已删除并通知用户", "success");
+        setTimeout(function () { location.reload(); }, 600);
+      } else {
+        showToast(r.error || "删除失败", "error");
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

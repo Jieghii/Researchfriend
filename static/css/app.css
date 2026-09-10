@@ -624,3 +624,150 @@ textarea.field { height: auto; min-height: 96px; padding: 12px; resize: vertical
 /* 聊天未读用"未查阅"的琥珀金，避免与"好友请求"红色混淆 */
 .nav-list .nav-item .badge.badge-unread { background: var(--accent); color: var(--accent-ink, #1a1206); }
 .mobile-tab a .badge.badge-unread { background: var(--accent); color: var(--accent-ink, #1a1206); }
+
+/* ===== v7：修炼境界 / 邀请 / 通知 / 榜单 ===== */
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--dur-fast) var(--ease);
+}
+.stat-cell:hover { background: var(--bg-inset); }
+
+.exp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+.exp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #f0c070);
+  border-radius: 999px;
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.realm-bar {
+  display: block;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  text-decoration: none;
+  color: inherit;
+}
+.realm-bar:hover { border-color: var(--border-strong); }
+.realm-title {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.realm-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--av-0);
+  flex-shrink: 0;
+}
+.realm-badge.av-1 { background: var(--av-1); }
+.realm-badge.av-2 { background: var(--av-2); }
+.realm-badge.av-3 { background: var(--av-3); }
+.realm-badge.av-4 { background: var(--av-4); }
+.realm-badge.av-5 { background: var(--av-5); }
+.realm-badge.av-6 { background: var(--av-6); }
+.realm-badge.av-7 { background: var(--av-7); }
+
+.realm-table { width: 100%; font-size: 14px; }
+.realm-tr {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 12px 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.realm-tr:last-child { border-bottom: none; }
+.realm-tr.head {
+  font-size: 12px;
+  color: var(--text-lo);
+  background: var(--bg-inset);
+}
+.realm-tr.mine { background: var(--accent-soft); }
+.realm-tr.passed { color: var(--text-mid); }
+.realm-tr .pill { margin-left: 6px; }
+
+.exp-plus {
+  color: var(--success);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.demo-warn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--text-hi);
+  font-size: 13px;
+}
+
+.invite-link { display: flex; gap: 8px; align-items: center; }
+.invite-link .field { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 13px; }
+
+.rate-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.rate-label { min-width: 72px; }
+.rate-grade {
+  min-width: 56px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-serif);
+}
+
+.notice-thread { display: flex; flex-direction: column; gap: 20px; }
+.notice-item { display: flex; gap: 12px; align-items: flex-start; }
+.notice-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.notice-body { max-width: 78%; }
+.notice-bubble {
+  position: relative;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow);
+}
+.notice-title { font-weight: 600; font-size: 14px; }
+.notice-snippet {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-inset);
+  color: var(--text-mid);
+  font-size: 13px;
+}
+.notice-reason { margin-top: 8px; font-size: 13px; color: var(--text-hi); }

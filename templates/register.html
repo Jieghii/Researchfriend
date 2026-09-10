@@ -25,7 +25,7 @@
       <input class="field mt-8" name="email" placeholder="选填，忘记密码时可通过邮箱找回" value="{{ form.email if form else '' }}" autocomplete="email">
 
       <label class="caption mt-16">邀请码 <span class="req">*</span></label>
-      <input class="field mt-8" name="invite_code" maxlength="16" placeholder="必填，向已注册的朋友索取" value="{{ form.invite_code if form else '' }}" style="text-transform:uppercase">
+      <input class="field mt-8" name="invite_code" maxlength="16" placeholder="必填，向已注册的朋友索取" value="{{ form.invite_code if form else (preset_code or '') }}" style="text-transform:uppercase">
 
       {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
       <button type="submit" class="btn btn-primary mt-24" style="width:100%">注册并进入</button>

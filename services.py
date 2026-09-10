@@ -36,6 +36,65 @@ YEAR_OPTIONS = ["<1年", "1-3年", "3-5年", "5-10年", "10-15年", "15年+"]
 MAX_TAGS = 10
 TAG_LIMIT_MSG = "最多选 10 个，先取消一个再加吧"
 
+# ---------- 修炼境界 ----------
+# 门槛：初始 0（闻弦境），10 升鸣骨境，之后每级门槛为前一级的 5 倍
+# 权力：每日可发随想数（闻弦 5 / 鸣骨 10 / 成丹 20，之后每级 +20）；邀请码数（每级 +1）
+REALMS = [
+    {"name": "闻弦境", "threshold": 0, "daily_thoughts": 5, "invites": 1},
+    {"name": "鸣骨境", "threshold": 10, "daily_thoughts": 10, "invites": 2},
+    {"name": "成丹境", "threshold": 50, "daily_thoughts": 20, "invites": 3},
+    {"name": "点墨境", "threshold": 250, "daily_thoughts": 40, "invites": 4},
+    {"name": "种莲境", "threshold": 1250, "daily_thoughts": 60, "invites": 5},
+    {"name": "观山境", "threshold": 6250, "daily_thoughts": 80, "invites": 6},
+    {"name": "燃灯境", "threshold": 31250, "daily_thoughts": 100, "invites": 7},
+    {"name": "登楼境", "threshold": 156250, "daily_thoughts": 120, "invites": 8},
+    {"name": "执棋境", "threshold": 781250, "daily_thoughts": 140, "invites": 9},
+    {"name": "入画境", "threshold": 3906250, "daily_thoughts": 160, "invites": 10},
+]
+
+# 修炼值获得方式
+EXP_RULES = [
+    {"kind": "thought", "amount": 1, "desc": "发布随想", "detail": "每发布一条随想 +1 修炼值"},
+    {
+        "kind": "like",
+        "amount": 2,
+        "desc": "获得点赞",
+        "detail": "随想被点赞，或对券商 / 买方机构的评价被点赞，每次 +2 修炼值",
+    },
+    {"kind": "liked", "amount": 3, "desc": "被标注为喜欢", "detail": "被其他研友标注为喜欢，每次 +3 修炼值"},
+    {"kind": "invite", "amount": 5, "desc": "成功邀请新研友", "detail": "每有一位新研友通过你的邀请码注册 +5 修炼值"},
+]
+EXP_KIND_DESC = {r["kind"]: r["desc"] for r in EXP_RULES}
+
+# 星级评级（1-5 星）
+STAR_LABELS = {1: "夯", 2: "很夯", 3: "非常夯", 4: "超级夯", 5: "夯爆了"}
+
+# 排名板块：旧财富排名（券商，买方打分）/ 铁牛奖（买方机构，卖方打分）
+BOARD_KINDS = {
+    "wealth": {
+        "key": "wealth",
+        "kind": "brokerage",
+        "title": "旧财富排名",
+        "org_label": "券商",
+        "team_label": "团队",
+        "rater_role": "buyer",
+        "rater_label": "买方",
+        "dims": [("research", "研究能力"), ("service", "服务能力"), ("capital", "钞能力")],
+        "subtitle": "券商与研究团队排行榜，由买方研友打分与匿名评价",
+    },
+    "ironbull": {
+        "key": "ironbull",
+        "kind": "buyside",
+        "title": "铁牛奖排名",
+        "org_label": "买方机构",
+        "team_label": "买方团队",
+        "rater_role": "seller",
+        "rater_label": "卖方",
+        "dims": [("invest", "投资能力"), ("gratitude", "知恩图报"), ("affinity", "亲和力")],
+        "subtitle": "买方机构与买方团队排行榜，由卖方研友打分与匿名评价",
+    },
+}
+
 
 def now_utc():
     return datetime.utcnow()
@@ -481,3 +540,115 @@ def tags_for_thoughts(thought_ids):
     for tid, tag in rows:
         out.setdefault(tid, []).append(tag)
     return out
+
+
+# ---------- 修炼境界 ----------
+def realm_index(exp):
+    """根据修炼值返回所处境界的下标（0 起）。"""
+    exp = exp or 0
+    idx = 0
+    for i, r in enumerate(REALMS):
+        if exp >= r["threshold"]:
+            idx = i
+    return idx
+
+
+def realm_of(exp):
+    """返回当前境界的完整信息。"""
+    i = realm_index(exp)
+    r = REALMS[i]
+    return {
+        "index": i,
+        "name": r["name"],
+        "full": f"{r['name']}大佬",
+        "threshold": r["threshold"],
+        "daily_thoughts": r["daily_thoughts"],
+        "invites": r["invites"],
+    }
+
+
+def next_realm(exp):
+    i = realm_index(exp)
+    if i + 1 >= len(REALMS):
+        return None
+    r = REALMS[i + 1]
+    return {
+        "index": i + 1,
+        "name": r["name"],
+        "full": f"{r['name']}大佬",
+        "threshold": r["threshold"],
+        "daily_thoughts": r["daily_thoughts"],
+        "invites": r["invites"],
+    }
+
+
+def realm_progress(exp):
+    """当前境界、下一境界与进度百分比。"""
+    exp = exp or 0
+    cur = realm_of(exp)
+    nxt = next_realm(exp)
+    if not nxt:
+        return {"exp": exp, "current": cur, "next": None, "need": 0, "pct": 100}
+    span = nxt["threshold"] - cur["threshold"]
+    done = exp - cur["threshold"]
+    pct = int(round(min(100.0, max(0.0, done / span * 100)))) if span else 100
+    return {"exp": exp, "current": cur, "next": nxt, "need": nxt["threshold"] - exp, "pct": pct}
+
+
+def daily_thought_limit(exp):
+    return realm_of(exp)["daily_thoughts"]
+
+
+def invite_quota(exp):
+    return realm_of(exp)["invites"]
+
+
+def add_exp(user, kind, ref_id=None, desc=None):
+    """给用户加修炼值并记一条流水。kind 见 EXP_RULES。"""
+    from models import ExpLog
+
+    rule = next((r for r in EXP_RULES if r["kind"] == kind), None)
+    if not rule:
+        return 0
+    amount = rule["amount"]
+    user.exp = (user.exp or 0) + amount
+    db.session.add(
+        ExpLog(
+            user_id=user.id,
+            amount=amount,
+            kind=kind,
+            desc=desc or rule["desc"],
+            ref_id=ref_id,
+            created_at=now_utc(),
+        )
+    )
+    return amount
+
+
+def today_exp_logs(user_id):
+    """今日修炼进展：按类型汇总今天获得的修炼值。"""
+    from models import ExpLog
+
+    start = datetime(now_utc().year, now_utc().month, now_utc().day)
+    rows = (
+        ExpLog.query.filter(ExpLog.user_id == user_id, ExpLog.created_at >= start)
+        .order_by(ExpLog.created_at.desc())
+        .all()
+    )
+    total = sum(r.amount for r in rows)
+    return rows, total
+
+
+def star_label(n):
+    """1-5 星对应的评级文案。"""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return ""
+    return STAR_LABELS.get(n, "")
+
+
+def today_thought_count(user_id):
+    """今天已发布的随想条数（用于每日额度限制）。"""
+    start = datetime(now_utc().year, now_utc().month, now_utc().day)
+    return Thought.query.filter(Thought.author_id == user_id, Thought.created_at >= start).count()

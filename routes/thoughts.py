@@ -5,12 +5,19 @@ from extensions import db
 from models import Comment, Like, Tag, Thought, ThoughtTag, User
 from routes.auth import current_user
 from services import (
+    PRESET_INDUSTRIES,
+    PRESET_STOCKS,
+    add_exp,
+    daily_thought_limit,
+    ensure_tag,
     likes_and_comments_for,
     now_utc,
+    realm_of,
     serialize_thought,
     tags_for_thoughts,
     thought_visible_query,
     thought_visible_to,
+    today_thought_count,
     user_brief,
 )
 
@@ -136,13 +143,41 @@ def create():
         return jsonify({"ok": False, "error": "发布失败，再试一次？"}), 400
     if len(body) > 500:
         return jsonify({"ok": False, "error": "最多 500 字"}), 400
+    # 每日发布额度由境界决定
+    limit = daily_thought_limit(me.exp or 0)
+    if today_thought_count(me.id) >= limit:
+        realm = realm_of(me.exp or 0)
+        return jsonify(
+            {
+                "ok": False,
+                "error": f"今日额度已用完：{realm['full']}每天可发 {limit} 条随想，提升境界可增加额度",
+            }
+        ), 400
     th = Thought(author_id=me.id, body=body, visibility=vis, created_at=now_utc())
     db.session.add(th)
     db.session.flush()
+    linked = set()
     for tid in data.get("tag_ids") or []:
         tag = Tag.query.get(int(tid))
-        if tag:
+        if tag and tag.id not in linked:
             db.session.add(ThoughtTag(thought_id=th.id, tag_id=tag.id))
+            linked.add(tag.id)
+    # 自定义标签：用户可直接输入任意话题名，不存在则自动创建
+    for raw in data.get("tag_names") or []:
+        name = str(raw).strip().lstrip("#").strip()
+        if not name or len(name) > 16:
+            continue
+        if name in PRESET_STOCKS:
+            kind = "stock"
+        else:
+            kind = "industry"
+        preset = name in PRESET_INDUSTRIES or name in PRESET_STOCKS
+        tag = ensure_tag(name, kind=kind, preset=preset)
+        if tag.id not in linked:
+            db.session.add(ThoughtTag(thought_id=th.id, tag_id=tag.id))
+            linked.add(tag.id)
+    # 发布随想 +1 修炼值
+    add_exp(me, "thought", ref_id=th.id, desc="发布随想")
     db.session.commit()
     packed = _bundle(me, [th])[0]
     return jsonify({"ok": True, "item": packed})
@@ -198,6 +233,14 @@ def like(tid):
         liked = False
     else:
         db.session.add(Like(user_id=me.id, thought_id=tid))
+        # 随想被点赞：作者 +2 修炼值（同一条随想只记一次）
+        author = User.query.get(th.author_id)
+        if author and author.id != me.id:
+            from models import ExpLog
+
+            dup = ExpLog.query.filter_by(user_id=author.id, kind="like", ref_id=tid).first()
+            if not dup:
+                add_exp(author, "like", ref_id=tid, desc="随想被点赞")
         db.session.commit()
         liked = True
     n = Like.query.filter_by(thought_id=tid).count()

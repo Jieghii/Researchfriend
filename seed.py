@@ -321,11 +321,16 @@ def ensure_assets():
         TeamRating,
     )
 
+    # 0) 回填旧数据的 kind：v7 之前创建的券商/团队没有 kind，统一标记为 brokerage
+    Brokerage.query.filter(Brokerage.kind.is_(None)).update({"kind": "brokerage"}, synchronize_session=False)
+    ResearchTeam.query.filter(ResearchTeam.kind.is_(None)).update({"kind": "brokerage"}, synchronize_session=False)
+    db.session.commit()
+
     # 1) 玻璃球点评：券商与团队
     if Brokerage.query.count() == 0:
         rng = random.Random(20260909)
         for b in BROKERAGES:
-            broker = Brokerage(name=b["name"], short_name=b["short"], intro=b["intro"], hue=b["hue"])
+            broker = Brokerage(name=b["name"], short_name=b["short"], intro=b["intro"], hue=b["hue"], kind="brokerage")
             db.session.add(broker)
             db.session.flush()
             for tname in b["teams"]:
@@ -334,6 +339,7 @@ def ensure_assets():
                         brokerage_id=broker.id,
                         name=tname,
                         intro=f"{b['name']}{tname}，虚构团队，仅用于演示。",
+                        kind="brokerage",
                     )
                 )
         db.session.commit()
@@ -356,6 +362,67 @@ def ensure_assets():
                             research=max(1, min(5, round(base + rng.uniform(-0.4, 0.5)))),
                             service=max(1, min(5, round(base + rng.uniform(-0.7, 0.6)))),
                             capital=max(1, min(5, round(base + rng.uniform(-1.0, 0.8)))),
+                        )
+                    )
+            db.session.commit()
+
+    # 2.5) 铁牛奖：买方机构与买方团队（虚构，仅用于演示）+ 卖方打分
+    if Brokerage.query.filter_by(kind="buyside").count() == 0:
+        BUYSIDES = [
+            {"name": "恒益基金", "short": "恒益", "hue": 20, "intro": "虚构买方机构，仅用于演示。",
+             "teams": ["消费组", "医药组", "科技组"]},
+            {"name": "明远资产", "short": "明远", "hue": 95, "intro": "虚构买方机构，仅用于演示。",
+             "teams": ["宏观策略组", "量化投资组"]},
+            {"name": "承泽资本", "short": "承泽", "hue": 165, "intro": "虚构买方机构，仅用于演示。",
+             "teams": ["消费组", "高端制造组"]},
+            {"name": "曜石投资", "short": "曜石", "hue": 215, "intro": "虚构买方机构，仅用于演示。",
+             "teams": ["医药组", "新能源组"]},
+            {"name": "长明资产", "short": "长明", "hue": 265, "intro": "虚构买方机构，仅用于演示。",
+             "teams": ["消费组", "金融地产组"]},
+            {"name": "星桥资本", "short": "星桥", "hue": 320, "intro": "虚构买方机构，仅用于演示。",
+             "teams": ["科技组", "港股策略组"]},
+        ]
+        for b in BUYSIDES:
+            org = Brokerage(
+                name=b["name"],
+                short_name=b["short"],
+                intro=b["intro"],
+                hue=b["hue"],
+                kind="buyside",
+            )
+            db.session.add(org)
+            db.session.flush()
+            for tname in b["teams"]:
+                db.session.add(
+                    ResearchTeam(
+                        brokerage_id=org.id,
+                        name=tname,
+                        intro=f"{b['name']}{tname}，虚构团队，仅用于演示。",
+                        kind="buyside",
+                    )
+                )
+        db.session.commit()
+
+    # 2.6) 卖方用户给买方团队打分（投资能力 / 知恩图报 / 亲和力）
+    if TeamRating.query.filter(TeamRating.invest.isnot(None)).count() == 0:
+        rng = random.Random(9981)
+        sellers = User.query.filter_by(role="seller").all()
+        teams = ResearchTeam.query.filter_by(kind="buyside").all()
+        if sellers and teams:
+            for team in teams:
+                n = min(len(sellers), rng.randint(3, 6))
+                for u in rng.sample(sellers, n):
+                    base = rng.uniform(2.6, 4.9)
+                    db.session.add(
+                        TeamRating(
+                            team_id=team.id,
+                            user_id=u.id,
+                            research=0,
+                            service=0,
+                            capital=0,
+                            invest=max(1, min(5, round(base + rng.uniform(-0.4, 0.5)))),
+                            gratitude=max(1, min(5, round(base + rng.uniform(-0.7, 0.6)))),
+                            affinity=max(1, min(5, round(base + rng.uniform(-0.6, 0.7)))),
                         )
                     )
             db.session.commit()

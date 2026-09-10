@@ -6,6 +6,7 @@ from extensions import db
 from models import Conversation, FriendRequest, Message, Tag, User
 from routes.auth import current_user
 from services import (
+    add_exp,
     are_friends,
     conversation_inbox,
     format_msg_time,
@@ -163,5 +164,9 @@ def add_friend(user_id):
             created_at=now_utc(),
         )
     )
+    # 被别人标注为喜欢：接收方 +3 修炼值
+    target = User.query.get(user_id)
+    if target:
+        add_exp(target, "liked", ref_id=me.id, desc="被标注为喜欢")
     db.session.commit()
     return jsonify({"ok": True, "pending": True})

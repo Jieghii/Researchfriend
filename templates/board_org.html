@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "macros.html" import stars %}
+{% block title %}{{ org.name }} · {{ cfg.title }}{% endblock %}
+{% block content %}
+<a class="caption" href="{{ url_for('glass.index') if key == 'wealth' else url_for('glass.ironbull') }}">‹ 返回{{ cfg.title }}</a>
+
+<section class="card mt-8" style="padding:24px">
+  <div class="flex gap-16 center">
+    <div class="brokerage-logo lg" style="--hue:{{ org.hue or 0 }}">{{ org.short_name or org.name[:2] }}</div>
+    <div class="grow">
+      <h1 class="h1">{{ org.name }}</h1>
+      <p class="caption mt-8">{{ org.intro }}</p>
+    </div>
+  </div>
+
+  {% if score %}
+  <div class="flex gap-24 center mt-24 wrap">
+    <div class="score-box">
+      <div class="numeric-l">{{ score.overall }}</div>
+      {{ stars(score.overall) }}
+      <div class="caption mt-8">{{ score.rated }}/{{ score.teams }} 个团队已评分</div>
+    </div>
+    <div class="dim-grid grow">
+      {% for dkey, label in cfg.dims %}
+      <div class="dim-item">
+        <div class="flex between center">
+          <span class="caption">{{ label }}</span>
+          <span class="mono">{{ score.vals[dkey] }}</span>
+        </div>
+        {{ stars(score.vals[dkey]) }}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <p class="caption mt-16">这个{{ cfg.org_label }}还没有团队得分。</p>
+  {% endif %}
+  <p class="caption mt-16">{{ cfg.org_label }}得分由其下属团队得分平均而来，不能直接给{{ cfg.org_label }}打分。</p>
+</section>
+
+<section class="mt-32">
+  <h2 class="h2">{{ cfg.team_label }}（{{ teams|length }}）</h2>
+  <div class="mt-16">
+    {% for t in teams %}
+    <a class="card list-row" href="{{ url_for('glass.team_detail', key=key, team_id=t.team.id) }}" style="padding:0 16px">
+      <span class="grow truncate">{{ t.team.name }}</span>
+      {% if t.score %}
+      {{ stars(t.score.overall) }}
+      <span class="numeric mono">{{ t.score.overall }}</span>
+      {% else %}
+      <span class="caption">暂无评分</span>
+      {% endif %}
+      <span class="chev">›</span>
+    </a>
+    {% else %}
+    <div class="empty"><div class="display">还没有团队</div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-32">
+  <div class="flex between center">
+    <h2 class="h2">评价（{{ reviews|length }}）</h2>
+    {% if can_rate %}
+    <button type="button" class="btn btn-primary" data-open-review>匿名评价</button>
+    {% else %}
+    <button type="button" class="btn btn-ghost" data-seller-deny>匿名评价</button>
+    {% endif %}
+  </div>
+  <p class="caption mt-8">仅{{ cfg.rater_label }}用户可以发表评价，评价以匿名方式展示。</p>
+  <div class="mt-16" id="review-list">
+    {% for r in reviews %}
+    <div class="card review-card" data-review="{{ r.id }}">
+      <div class="review-head">
+        <span class="avatar-mini">匿</span>
+        <span class="caption">匿名{{ cfg.rater_label }}用户 · {{ r.created_at }}</span>
+      </div>
+      <p class="mt-8">{{ r.content }}</p>
+      <div class="flex gap-16 center mt-12">
+        <button type="button" class="vote-btn {% if r.my_vote == 1 %}on{% endif %}" data-vote="1" aria-label="点赞">赞 <span data-ups>{{ r.ups }}</span></button>
+        <button type="button" class="vote-btn {% if r.my_vote == -1 %}on{% endif %}" data-vote="-1" aria-label="点踩">踩 <span data-downs>{{ r.downs }}</span></button>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty"><div class="display">还没有评价</div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="overlay" id="review-modal">
+  <div class="modal">
+    <h2 class="h2">匿名评价 · {{ org.name }}</h2>
+    <p class="caption mt-8">以匿名方式发布，其他用户只能看到「匿名{{ cfg.rater_label }}用户」</p>
+    <textarea class="field mt-16" id="review-input" rows="4" maxlength="300" placeholder="说说你的真实感受…"></textarea>
+    <div class="flex gap-12 mt-16">
+      <button type="button" class="btn btn-ghost grow" data-close-review>取消</button>
+      <button type="button" class="btn btn-primary grow" data-submit-review data-target-type="brokerage" data-target-id="{{ org.id }}" data-board="{{ key }}">发布</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/glass.js') }}"></script>
+{% endblock %}

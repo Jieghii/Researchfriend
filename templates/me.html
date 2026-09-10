@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import avatar, thought_card %}
+{% from "macros.html" import avatar %}
 {% block title %}我的 · 研友{% endblock %}
 {% block content %}
 {% if show_tag_banner %}
@@ -11,22 +11,55 @@
     <div class="grow">
       <div class="flex between center">
         <h1 class="h1">{{ current_user.nickname }}</h1>
-        <button type="button" class="btn btn-ghost" data-close="" onclick="openModal('edit-profile')">编辑资料</button>
+        <button type="button" class="btn btn-ghost" onclick="openModal('edit-profile')">编辑资料</button>
       </div>
       <p class="caption mt-8">{% if current_user.role=='buyer' %}买方{% else %}卖方{% endif %} · {{ current_user.years }}</p>
     </div>
   </div>
   <div class="stats">
-    <div><div class="numeric-l">{{ liked }}</div><div class="caption">被喜欢</div></div>
-    <div><div class="numeric-l">{{ talked }}</div><div class="caption">聊过的人</div></div>
-    <div><div class="numeric-l">{{ thoughts_n }}</div><div class="caption">发过随想</div></div>
+    <a class="stat-cell" href="{{ url_for('profile.liked_page') }}">
+      <div class="numeric-l">{{ liked }}</div><div class="caption">被喜欢</div>
+    </a>
+    <a class="stat-cell" href="{{ url_for('profile.talked_page') }}">
+      <div class="numeric-l">{{ talked }}</div><div class="caption">聊过的人</div>
+    </a>
+    <a class="stat-cell" href="{{ url_for('profile.realm_page') }}">
+      <div class="numeric-l">{{ realm.index + 1 }}</div><div class="caption">修炼境界</div>
+    </a>
   </div>
+  <a class="realm-bar mt-16" href="{{ url_for('profile.realm_page') }}">
+    <div class="flex between center">
+      <span>{{ realm.full }}</span>
+      <span class="caption mono">修炼值 {{ exp }}</span>
+    </div>
+    <div class="exp-bar mt-8"><div class="exp-bar-fill" style="width:{{ progress.pct }}%"></div></div>
+    <div class="caption mt-8">
+      {% if progress.next %}距「{{ progress.next.full }}」还需 {{ progress.need }} 点{% else %}已臻至最高境界{% endif %}
+    </div>
+  </a>
 </div>
 
-<a class="card list-row mt-16" href="{{ url_for('profile.requests_page') }}" style="padding:0 16px">
-  <span class="grow">收到的好友请求</span>
-  {% if pending_n %}<span class="badge">{{ pending_n }}</span>{% else %}<span class="caption">暂无新请求</span>{% endif %}
-</a>
+<div class="card mt-16" style="padding:0">
+  <a class="list-row" href="{{ url_for('profile.my_thoughts') }}" style="padding:0 16px">
+    <span class="grow">我的随想</span>
+    <span class="caption">{{ thoughts_n }} 条</span>
+    <span class="chev">›</span>
+  </a>
+  <a class="list-row" href="{{ url_for('invite.page') }}" style="padding:0 16px">
+    <span class="grow">邀请新研友</span>
+    <span class="caption">{% if invite_left %}剩余 {{ invite_left }} 个名额{% else %}查看邀请码{% endif %}</span>
+    <span class="chev">›</span>
+  </a>
+  <a class="list-row" href="{{ url_for('feedback.page') }}" style="padding:0 16px">
+    <span class="grow">用户反馈</span>
+    <span class="chev">›</span>
+  </a>
+  <a class="list-row" href="{{ url_for('profile.notices') }}" style="padding:0 16px">
+    <span class="grow">系统通知</span>
+    {% if notice_n %}<span class="badge badge-unread">{{ notice_n }}</span>{% endif %}
+    <span class="chev">›</span>
+  </a>
+</div>
 
 <section class="mt-32">
   <div class="flex between center">
@@ -42,23 +75,6 @@
   </div>
 </section>
 
-<section class="mt-32">
-  <div class="flex between center">
-    <h2 class="h2">我的随想</h2>
-    <button type="button" class="btn btn-primary" data-open-compose>发布</button>
-  </div>
-  <div class="mt-16">
-    {% for it in items %}
-    {{ thought_card(it) }}
-    {% else %}
-    <div class="empty">
-      <div class="display">你还没有发过随想</div>
-      <button type="button" class="btn btn-ghost mt-16" data-open-compose>发一条</button>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-
 <button type="button" class="btn-text mt-32" id="logout-btn">退出登录</button>
 <p class="caption mt-16" style="display:none" id="mobile-theme-hint"></p>
 <div class="mt-16" style="display:none" id="mobile-theme">
@@ -68,21 +84,28 @@
 <div class="overlay" id="edit-profile">
   <div class="modal">
     <h2 class="h2">编辑资料</h2>
-    <p class="caption mt-8">昵称不可修改</p>
+    <p class="caption mt-8">昵称不可修改。个人资料一个月只能修改一次。</p>
+    {% if profile_locked %}
+    <p class="demo-warn mt-8">距上次修改不足 30 天，还需等待 {{ profile_lock_days }} 天才能再次修改。</p>
+    {% endif %}
     <label class="caption mt-16">身份</label>
-    <select class="field mt-8" id="edit-role">
+    <select class="field mt-8" id="edit-role" {% if profile_locked %}disabled{% endif %}>
       <option value="buyer" {% if current_user.role=='buyer' %}selected{% endif %}>买方</option>
       <option value="seller" {% if current_user.role=='seller' %}selected{% endif %}>卖方</option>
     </select>
     <label class="caption mt-16">工作年限</label>
-    <select class="field mt-8" id="edit-years">
+    <select class="field mt-8" id="edit-years" {% if profile_locked %}disabled{% endif %}>
       {% for y in years %}
       <option value="{{ y }}" {% if current_user.years==y %}selected{% endif %}>{{ y }}</option>
       {% endfor %}
     </select>
     <div class="flex gap-12 mt-16">
       <button type="button" class="btn btn-ghost grow" data-close="edit-profile">取消</button>
+      {% if profile_locked %}
+      <button type="button" class="btn btn-primary grow" disabled style="opacity:.5">暂不可修改</button>
+      {% else %}
       <button type="button" class="btn btn-primary grow" id="save-profile">保存</button>
+      {% endif %}
     </div>
   </div>
 </div>

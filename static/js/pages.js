@@ -183,6 +183,16 @@
       });
     });
   });
+  qsa("[data-cancel-req]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      api("/api/requests/" + b.getAttribute("data-cancel-req") + "/cancel", { method: "POST" }).then(function (data) {
+        if (!data.ok) { showToast(data.error || "撤回失败", "error"); return; }
+        showToast("已撤回请求", "neutral");
+        b.closest(".req-card").remove();
+        if (!qs(".req-card")) location.reload();
+      });
+    });
+  });
 
   qs("#save-profile") && qs("#save-profile").addEventListener("click", function () {
     api("/api/profile", { method: "POST", body: JSON.stringify({ role: qs("#edit-role").value, years: qs("#edit-years").value }) }).then(function () {

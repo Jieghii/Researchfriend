@@ -2,7 +2,13 @@
 {% from "macros.html" import avatar %}
 {% block title %}聊天 · 研友{% endblock %}
 {% block content %}
-<h1 class="h1">聊天</h1>
+<div class="flex between center">
+  <h1 class="h1">聊天</h1>
+  <a class="btn btn-ghost" href="{{ url_for('profile.friends_page') }}">
+    通讯录
+    {% if new_request %}<span class="badge badge-unread">{{ new_request if new_request < 100 else '99+' }}</span>{% endif %}
+  </a>
+</div>
 {% if not items %}
 <div class="empty mt-32">
   <svg viewBox="0 0 24 24"><path d="M5 6h14v10H8l-3 3V6z"/></svg>

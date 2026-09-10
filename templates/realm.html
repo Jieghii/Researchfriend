@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}修炼境界 · 研友{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">修炼境界</h1>
+</div>
+
+<section class="card" style="padding:24px">
+  <div class="flex between center wrap" style="gap:12px">
+    <div>
+      <div class="caption">当前境界</div>
+      <div class="realm-title mt-8">{{ progress.current.full }}</div>
+      <div class="caption mt-8">第 {{ progress.current.index + 1 }} 境 · 修炼值 <span class="mono">{{ exp }}</span></div>
+    </div>
+    <div class="realm-badge av-{{ progress.current.index % 8 }}">{{ progress.current.index + 1 }}</div>
+  </div>
+
+  <div class="mt-24">
+    <div class="flex between center">
+      <span class="caption">{% if progress.next %}距下一境界「{{ progress.next.full }}」还需 {{ progress.need }} 点{% else %}已臻至最高境界{% endif %}</span>
+      <span class="caption mono">{% if progress.next %}{{ progress.pct }}%{% else %}100%{% endif %}</span>
+    </div>
+    <div class="exp-bar mt-8"><div class="exp-bar-fill" style="width:{{ progress.pct }}%"></div></div>
+    <div class="flex between caption mt-8">
+      <span>{{ progress.current.full }}（{{ progress.current.threshold }}）</span>
+      <span>{% if progress.next %}{{ progress.next.full }}（{{ progress.next.threshold }}）{% else %}入画境大佬{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="flex gap-24 wrap mt-24">
+    <div>
+      <div class="numeric-l">{{ daily_limit }}</div>
+      <div class="caption">每日可发随想</div>
+    </div>
+    <div>
+      <div class="numeric-l">{{ progress.current.invites }}</div>
+      <div class="caption">邀请码数量</div>
+    </div>
+  </div>
+</section>
+
+<section class="mt-32">
+  <div class="flex between center">
+    <h2 class="h2">今日修炼进展</h2>
+    <span class="caption mono">+{{ today_total }} 点</span>
+  </div>
+  {% if logs %}
+  <div class="card mt-16" style="padding:0">
+    {% for lg in logs %}
+    <div class="list-row" style="padding:12px 16px">
+      <span class="grow">{{ lg.desc }}</span>
+      <span class="caption">{{ lg.created_at.strftime('%H:%M') }}</span>
+      <span class="numeric mono exp-plus">+{{ lg.amount }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty mt-16">
+    <div class="display">今天还没有获得修炼值</div>
+    <p class="caption mt-8">发条随想、互点个赞，都能积攒修炼值</p>
+  </div>
+  {% endif %}
+</section>
+
+<a class="card list-row mt-32" href="{{ url_for('profile.realm_rules') }}" style="padding:0 16px">
+  <span class="grow">修炼境界说明</span>
+  <span class="caption">境界门槛与权力</span>
+  <span class="chev">›</span>
+</a>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "macros.html" import thought_card %}
+{% block title %}我的随想 · 研友{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="{{ url_for('profile.me_page') }}">◀</a>
+  <h1 class="h1">我的随想</h1>
+</div>
+<p class="caption mb-16">共 {{ total }} 条</p>
+
+{% if items %}
+<div class="mt-8">
+  {% for it in items %}
+  {{ thought_card(it) }}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <div class="display">你还没有发过随想</div>
+  <a class="btn btn-primary mt-16" href="{{ url_for('thoughts.timeline') }}">去随想看看</a>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/thoughts.js') }}"></script>
+{% endblock %}

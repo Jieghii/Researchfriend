@@ -22,6 +22,8 @@
         <a class="nav-item {% if request.endpoint=='admin.users' %}active{% endif %}" href="{{ url_for('admin.users') }}">用户管理</a>
         <a class="nav-item {% if request.endpoint=='admin.feedbacks' %}active{% endif %}" href="{{ url_for('admin.feedbacks') }}">用户反馈</a>
         <a class="nav-item {% if request.endpoint=='admin.invites' %}active{% endif %}" href="{{ url_for('admin.invites') }}">邀请码</a>
+        <a class="nav-item {% if request.endpoint=='admin.orgs' %}active{% endif %}" href="{{ url_for('admin.orgs') }}">机构与团队</a>
+        <a class="nav-item {% if request.endpoint=='admin.content' %}active{% endif %}" href="{{ url_for('admin.content') }}">内容管理</a>
       </nav>
       <div class="theme-switch">
         <a class="caption" href="{{ url_for('admin.logout') }}">退出后台</a>

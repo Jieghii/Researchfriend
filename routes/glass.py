@@ -1,62 +1,88 @@
-"""玻璃球点评：券商 / 研究团队排行榜、评分与匿名评价。
+"""排行榜模块：旧财富排名（券商，买方打分）+ 铁牛奖排名（买方机构，卖方打分）。
 
 规则：
-- 评分区间 1-5 星，三个维度：研究能力、服务能力、钞能力
-- 只有买方用户可以打分与评价；卖方点击会收到「仅买方用户可以评价」提示
+- 两个榜单共用机构 / 团队 / 评分 / 评价四张表，用 kind 区分（brokerage / buyside）
+- 旧财富排名：维度 研究能力 / 服务能力 / 钞能力，只有买方用户可以打分与评价
+- 铁牛奖排名：维度 投资能力 / 知恩图报 / 亲和力，只有卖方用户可以打分与评价
+- 评分区间 1-5 星，对应评级：夯 / 很夯 / 非常夯 / 超级夯 / 夯爆了
 - 评价匿名展示，其他用户可点赞 / 点踩
-- 券商得分 = 其下所有已评分团队得分的平均值，用户不能直接给券商打分
+- 机构得分 = 其下所有已评分团队得分的平均值，用户不能直接给机构打分
 """
 
-from flask import Blueprint, jsonify, render_template, request, url_for
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
 from extensions import db
 from models import Brokerage, ResearchTeam, Review, ReviewVote, TeamRating, User
 from routes.auth import current_user
-from services import now_utc, relative_time
+from services import (
+    BOARD_KINDS,
+    now_utc,
+    relative_time,
+    star_label,
+)
 
 bp = Blueprint("glass", __name__)
 
-DIMENSIONS = [
-    ("research", "研究能力"),
-    ("service", "服务能力"),
-    ("capital", "钞能力"),
-]
+
+def _cfg(key):
+    return BOARD_KINDS.get(key) or BOARD_KINDS["wealth"]
 
 
-def team_score(team_id):
-    rows = TeamRating.query.filter_by(team_id=team_id).all()
+def dim_keys(kind):
+    return [d for d, _ in _cfg("ironbull" if kind == "buyside" else "wealth")["dims"]]
+
+
+def dim_labels(kind):
+    return _cfg("ironbull" if kind == "buyside" else "wealth")["dims"]
+
+
+def team_score(team):
+    """团队得分。返回 {overall, count, vals:{dim_key: 均值}}，无人打分返回 None。"""
+    if not team:
+        return None
+    keys = dim_keys(team.kind)
+    rows = TeamRating.query.filter_by(team_id=team.id).all()
     if not rows:
         return None
-    n = len(rows)
-    research = sum(r.research for r in rows) / n
-    service = sum(r.service for r in rows) / n
-    capital = sum(r.capital for r in rows) / n
+    vals = {}
+    for k in keys:
+        nums = [getattr(r, k) for r in rows if getattr(r, k)]
+        if not nums:
+            return None
+        vals[k] = round(sum(nums) / len(nums), 2)
     return {
-        "research": round(research, 2),
-        "service": round(service, 2),
-        "capital": round(capital, 2),
-        "overall": round((research + service + capital) / 3, 2),
-        "count": n,
+        "overall": round(sum(vals.values()) / len(vals), 2),
+        "count": len(rows),
+        "vals": vals,
     }
 
 
-def brokerage_score(brokerage_id):
-    teams = ResearchTeam.query.filter_by(brokerage_id=brokerage_id).all()
-    acc = {"research": [], "service": [], "capital": [], "overall": []}
-    for t in teams:
-        s = team_score(t.id)
-        if s:
-            for k in acc:
-                acc[k].append(s[k])
-    if not acc["overall"]:
+def team_score_by_id(team_id):
+    return team_score(ResearchTeam.query.get(team_id))
+
+
+def org_score(org):
+    """机构得分 = 其下团队得分的平均。"""
+    if not org:
         return None
+    keys = dim_keys(org.kind)
+    teams = ResearchTeam.query.filter_by(brokerage_id=org.id).all()
+    acc = {k: [] for k in keys}
+    overalls = []
+    for t in teams:
+        s = team_score(t)
+        if s:
+            for k in keys:
+                acc[k].append(s["vals"][k])
+            overalls.append(s["overall"])
+    if not overalls:
+        return None
+    vals = {k: round(sum(v) / len(v), 2) for k, v in acc.items() if v}
     return {
-        "research": round(sum(acc["research"]) / len(acc["research"]), 2),
-        "service": round(sum(acc["service"]) / len(acc["service"]), 2),
-        "capital": round(sum(acc["capital"]) / len(acc["capital"]), 2),
-        "overall": round(sum(acc["overall"]) / len(acc["overall"]), 2),
+        "overall": round(sum(overalls) / len(overalls), 2),
+        "vals": vals,
         "teams": len(teams),
-        "rated": len(acc["overall"]),
+        "rated": len(overalls),
     }
 
 
@@ -85,211 +111,280 @@ def _reviews_for(target_type, target_id, viewer_id):
     return [_review_view(r, viewer_id) for r in rows]
 
 
-@bp.route("/glass")
-def index():
-    brokerages = Brokerage.query.order_by(Brokerage.id).all()
-    teams = ResearchTeam.query.all()
+def _board_view(key, me):
+    """构建榜单首页需要的数据。"""
+    cfg = _cfg(key)
+    kind = cfg["kind"]
+    orgs = Brokerage.query.filter_by(kind=kind).order_by(Brokerage.id).all()
+    teams = ResearchTeam.query.filter_by(kind=kind).all()
 
-    b_list = []
-    for b in brokerages:
-        s = brokerage_score(b.id)
+    o_list = []
+    for o in orgs:
+        s = org_score(o)
         if s:
-            b_list.append({"brokerage": b, "score": s})
-    b_list.sort(key=lambda x: -x["score"]["overall"])
+            o_list.append({"org": o, "score": s})
+    o_list.sort(key=lambda x: -x["score"]["overall"])
 
     t_list = []
     for t in teams:
-        s = team_score(t.id)
+        s = team_score(t)
         if s:
-            t_list.append({"team": t, "brokerage": Brokerage.query.get(t.brokerage_id), "score": s})
+            t_list.append({"team": t, "org": Brokerage.query.get(t.brokerage_id), "score": s})
     t_list.sort(key=lambda x: -x["score"]["overall"])
 
     cards = []
-    for b in brokerages:
-        cards.append({"brokerage": b, "score": brokerage_score(b.id),
-                      "teams_n": ResearchTeam.query.filter_by(brokerage_id=b.id).count()})
+    for o in orgs:
+        cards.append(
+            {
+                "org": o,
+                "score": org_score(o),
+                "teams_n": ResearchTeam.query.filter_by(brokerage_id=o.id).count(),
+            }
+        )
+    return {
+        "cfg": cfg,
+        "key": key,
+        "orgs": orgs,
+        "top_orgs": o_list[:3],
+        "top_teams": t_list[:3],
+        "cards": cards,
+        "can_rate": bool(me and me.role == cfg["rater_role"]),
+        "me": me,
+    }
 
+
+def _render_board(key):
+    me = current_user()
+    view = _board_view(key, me)
     return render_template(
-        "glass.html",
+        "board.html",
         nav="discover",
-        top_brokerages=b_list[:3],
-        top_teams=t_list[:3],
-        cards=cards,
-        brokerages=brokerages,
-        dimensions=DIMENSIONS,
+        star_labels={1: "夯", 2: "很夯", 3: "非常夯", 4: "超级夯", 5: "夯爆了"},
+        **view,
     )
 
 
-@bp.route("/glass/rank/<kind>")
-def rank(kind):
-    if kind == "brokerage":
+# ---------- 榜单入口 ----------
+@bp.route("/glass")
+def index():
+    """旧财富排名（原玻璃球点评）。"""
+    return _render_board("wealth")
+
+
+@bp.route("/ironbull")
+def ironbull():
+    """铁牛奖排名。"""
+    return _render_board("ironbull")
+
+
+# ---------- 总榜 ----------
+@bp.route("/board/<key>/rank/<kind>")
+def rank(key, kind):
+    me = current_user()
+    cfg = _cfg(key)
+    kind_filter = cfg["kind"]
+    if kind == "org":
         rows = []
-        for b in Brokerage.query.order_by(Brokerage.id).all():
-            s = brokerage_score(b.id)
+        for o in Brokerage.query.filter_by(kind=kind_filter).order_by(Brokerage.id).all():
+            s = org_score(o)
             if s:
-                rows.append({
-                    "name": b.name, "score": s,
-                    "href": url_for("glass.brokerage_detail", brokerage_id=b.id),
-                    "sub": f"{s['rated']}/{s['teams']} 个团队已评分",
-                })
-        title = "券商总榜"
+                rows.append(
+                    {
+                        "name": o.name,
+                        "score": s,
+                        "href": url_for("glass.org_detail", key=key, org_id=o.id),
+                        "sub": f"{s['rated']}/{s['teams']} 个团队已评分",
+                    }
+                )
+        title = f"{cfg['org_label']}总榜"
     else:
         rows = []
-        for t in ResearchTeam.query.all():
-            s = team_score(t.id)
+        for t in ResearchTeam.query.filter_by(kind=kind_filter).all():
+            s = team_score(t)
             if s:
-                b = Brokerage.query.get(t.brokerage_id)
-                rows.append({
-                    "name": t.name, "score": s,
-                    "href": url_for("glass.team_detail", team_id=t.id),
-                    "sub": b.name if b else "",
-                })
-        title = "团队总榜"
+                o = Brokerage.query.get(t.brokerage_id)
+                rows.append(
+                    {
+                        "name": t.name,
+                        "score": s,
+                        "href": url_for("glass.team_detail", key=key, team_id=t.id),
+                        "sub": o.name if o else "",
+                    }
+                )
+        title = f"{cfg['team_label']}总榜"
     rows.sort(key=lambda x: -x["score"]["overall"])
-    return render_template("glass_rank.html", nav="discover", title=title, rows=rows,
-                           kind=kind, dimensions=DIMENSIONS)
-
-
-@bp.route("/glass/brokerage/<int:brokerage_id>")
-def brokerage_detail(brokerage_id):
-    me = current_user()
-    b = Brokerage.query.get_or_404(brokerage_id)
-    score = brokerage_score(b.id)
-    teams = ResearchTeam.query.filter_by(brokerage_id=b.id).order_by(ResearchTeam.id).all()
-    team_views = [{"team": t, "score": team_score(t.id)} for t in teams]
-    reviews = _reviews_for("brokerage", b.id, me.id)
     return render_template(
-        "glass_brokerage.html",
+        "board_rank.html",
         nav="discover",
-        brokerage=b,
+        cfg=cfg,
+        key=key,
+        title=title,
+        rows=rows,
+        kind=kind,
+    )
+
+
+# ---------- 机构详情 ----------
+@bp.route("/board/<key>/org/<int:org_id>")
+def org_detail(key, org_id):
+    me = current_user()
+    cfg = _cfg(key)
+    o = Brokerage.query.get_or_404(org_id)
+    score = org_score(o)
+    teams = ResearchTeam.query.filter_by(brokerage_id=o.id).order_by(ResearchTeam.id).all()
+    team_views = [{"team": t, "score": team_score(t)} for t in teams]
+    reviews = _reviews_for("brokerage", o.id, me.id if me else 0)
+    return render_template(
+        "board_org.html",
+        nav="discover",
+        cfg=cfg,
+        key=key,
+        org=o,
         score=score,
         teams=team_views,
         reviews=reviews,
-        dimensions=DIMENSIONS,
+        can_rate=bool(me and me.role == cfg["rater_role"]),
     )
 
 
-@bp.route("/glass/team/<int:team_id>")
-def team_detail(team_id):
+# ---------- 团队详情 ----------
+@bp.route("/board/<key>/team/<int:team_id>")
+def team_detail(key, team_id):
     me = current_user()
+    cfg = _cfg(key)
     t = ResearchTeam.query.get_or_404(team_id)
-    b = Brokerage.query.get(t.brokerage_id)
-    score = team_score(t.id)
-    mine = TeamRating.query.filter_by(team_id=t.id, user_id=me.id).first()
-    reviews = _reviews_for("team", t.id, me.id)
+    o = Brokerage.query.get(t.brokerage_id)
+    score = team_score(t)
+    mine = TeamRating.query.filter_by(team_id=t.id, user_id=me.id).first() if me else None
+    reviews = _reviews_for("team", t.id, me.id if me else 0)
     return render_template(
-        "glass_team.html",
+        "board_team.html",
         nav="discover",
+        cfg=cfg,
+        key=key,
         team=t,
-        brokerage=b,
+        org=o,
         score=score,
         mine=mine,
         reviews=reviews,
-        dimensions=DIMENSIONS,
+        can_rate=bool(me and me.role == cfg["rater_role"]),
+        star_labels={1: "夯", 2: "很夯", 3: "非常夯", 4: "超级夯", 5: "夯爆了"},
     )
 
 
-@bp.route("/api/glass/team/<int:team_id>/rate", methods=["POST"])
-def rate_team(team_id):
+# ---------- 打分 ----------
+@bp.route("/api/board/<key>/team/<int:team_id>/rate", methods=["POST"])
+def rate_team(key, team_id):
     me = current_user()
+    cfg = _cfg(key)
+    t = ResearchTeam.query.get_or_404(team_id)
+    if me.role != cfg["rater_role"]:
+        return jsonify({"ok": False, "error": f"仅{cfg['rater_label']}用户可以评分"}), 403
     data = request.get_json(force=True, silent=True) or {}
-    if me.role != "buyer":
-        return jsonify({"ok": False, "error": "仅买方用户可以评分"}), 403
     vals = {}
-    for key, _label in DIMENSIONS:
+    for k, _label in cfg["dims"]:
         try:
-            v = int(data.get(key) or 0)
-        except (TypeError, ValueError):
-            v = 0
-        if v < 1 or v > 5:
-            return jsonify({"ok": False, "error": "评分需要在 1-5 星之间"}), 400
-        vals[key] = v
-    rec = TeamRating.query.filter_by(team_id=team_id, user_id=me.id).first()
-    if not rec:
-        rec = TeamRating(team_id=team_id, user_id=me.id)
-        db.session.add(rec)
-    rec.research = vals["research"]
-    rec.service = vals["service"]
-    rec.capital = vals["capital"]
-    db.session.commit()
-    return jsonify({"ok": True, "score": team_score(team_id)})
-
-
-@bp.route("/api/glass/team/create", methods=["POST"])
-def create_team():
-    """买方用户自荐新增团队：填写券商名 + 团队名 + 三维评分。
-
-    - 券商按名称查重；不存在则自动创建（hue 由名称 hash 得到，简介为占位文案）
-    - 同券商下同名的团队视为同一团队，复用并更新本用户的评分
-    - 创建/更新成功后跳转团队详情页
-    """
-    me = current_user()
-    if me.role != "buyer":
-        return jsonify({"ok": False, "error": "仅买方用户可以新增团队评分"}), 403
-    data = request.get_json(force=True, silent=True) or {}
-    brokerage_name = (data.get("brokerage_name") or "").strip()
-    team_name = (data.get("team_name") or "").strip()
-    if not brokerage_name or not team_name:
-        return jsonify({"ok": False, "error": "请填写券商名称和团队名称"}), 400
-    if len(brokerage_name) > 32 or len(team_name) > 32:
-        return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
-    vals = {}
-    for key, _label in DIMENSIONS:
-        try:
-            v = int(data.get(key) or 0)
+            v = int(data.get(k) or 0)
         except (TypeError, ValueError):
             v = 0
         if v < 1 or v > 5:
             return jsonify({"ok": False, "error": "每个维度都要打 1-5 星"}), 400
-        vals[key] = v
-    b = Brokerage.query.filter_by(name=brokerage_name).first()
-    if not b:
-        hue = sum(ord(c) for c in brokerage_name) % 360
-        b = Brokerage(
-            name=brokerage_name,
-            short_name=brokerage_name[:2],
-            intro="由用户贡献的虚拟券商",
-            hue=hue,
+        vals[k] = v
+    rec = TeamRating.query.filter_by(team_id=t.id, user_id=me.id).first()
+    if not rec:
+        rec = TeamRating(team_id=t.id, user_id=me.id)
+        db.session.add(rec)
+    set_rating_dims(rec, vals)
+    db.session.commit()
+    return jsonify({"ok": True, "score": team_score(t)})
+
+
+ALL_DIMS = ("research", "service", "capital", "invest", "gratitude", "affinity")
+
+
+def set_rating_dims(rec, vals):
+    """写入本榜单三维，其余维度填 0（兼容旧库里 research/service/capital 的 NOT NULL 约束）。"""
+    for k in ALL_DIMS:
+        if k not in vals:
+            setattr(rec, k, 0)
+    for k, v in vals.items():
+        setattr(rec, k, v)
+
+
+# ---------- 新增机构 + 团队并打分 ----------
+@bp.route("/api/board/<key>/team/create", methods=["POST"])
+def create_team(key):
+    """用户自荐新增团队：填写机构名 + 团队名 + 三维评分。
+
+    - 机构按名称查重（限定本榜单 kind）；不存在则自动创建
+    - 同机构下同名的团队视为同一团队，复用并覆盖本用户评分
+    """
+    me = current_user()
+    cfg = _cfg(key)
+    if me.role != cfg["rater_role"]:
+        return jsonify({"ok": False, "error": f"仅{cfg['rater_label']}用户可以新增并打分"}), 403
+    data = request.get_json(force=True, silent=True) or {}
+    org_name = (data.get("org_name") or data.get("brokerage_name") or "").strip()
+    team_name = (data.get("team_name") or "").strip()
+    if not org_name or not team_name:
+        return jsonify({"ok": False, "error": f"请填写{cfg['org_label']}名称和团队名称"}), 400
+    if len(org_name) > 32 or len(team_name) > 32:
+        return jsonify({"ok": False, "error": "名称不能超过 32 字"}), 400
+    vals = {}
+    for k, _label in cfg["dims"]:
+        try:
+            v = int(data.get(k) or 0)
+        except (TypeError, ValueError):
+            v = 0
+        if v < 1 or v > 5:
+            return jsonify({"ok": False, "error": "每个维度都要打 1-5 星"}), 400
+        vals[k] = v
+
+    o = Brokerage.query.filter_by(name=org_name, kind=cfg["kind"]).first()
+    if not o:
+        o = Brokerage(
+            name=org_name,
+            short_name=org_name[:2],
+            intro=f"由用户贡献的虚拟{cfg['org_label']}",
+            hue=sum(ord(c) for c in org_name) % 360,
+            kind=cfg["kind"],
         )
-        db.session.add(b)
+        db.session.add(o)
         db.session.flush()
-    team = ResearchTeam.query.filter_by(brokerage_id=b.id, name=team_name).first()
+    team = ResearchTeam.query.filter_by(brokerage_id=o.id, name=team_name).first()
     if not team:
         team = ResearchTeam(
-            brokerage_id=b.id,
+            brokerage_id=o.id,
             name=team_name,
             intro="由用户贡献的虚拟团队",
+            kind=cfg["kind"],
         )
         db.session.add(team)
         db.session.flush()
     rec = TeamRating.query.filter_by(team_id=team.id, user_id=me.id).first()
-    if rec:
-        rec.research = vals["research"]
-        rec.service = vals["service"]
-        rec.capital = vals["capital"]
-    else:
-        db.session.add(TeamRating(
-            team_id=team.id,
-            user_id=me.id,
-            research=vals["research"],
-            service=vals["service"],
-            capital=vals["capital"],
-        ))
+    if not rec:
+        rec = TeamRating(team_id=team.id, user_id=me.id)
+        db.session.add(rec)
+    set_rating_dims(rec, vals)
     db.session.commit()
-    return jsonify({
-        "ok": True,
-        "team_id": team.id,
-        "brokerage_id": b.id,
-        "redirect": url_for("glass.team_detail", team_id=team.id),
-    })
+    return jsonify(
+        {
+            "ok": True,
+            "team_id": team.id,
+            "org_id": o.id,
+            "redirect": url_for("glass.team_detail", key=key, team_id=team.id),
+        }
+    )
 
 
-@bp.route("/api/glass/review", methods=["POST"])
-def add_review():
+# ---------- 匿名评价 ----------
+@bp.route("/api/board/<key>/review", methods=["POST"])
+def add_review(key):
     me = current_user()
+    cfg = _cfg(key)
+    if me.role != cfg["rater_role"]:
+        return jsonify({"ok": False, "error": f"仅{cfg['rater_label']}用户可以评价"}), 403
     data = request.get_json(force=True, silent=True) or {}
-    if me.role != "buyer":
-        return jsonify({"ok": False, "error": "仅买方用户可以评价"}), 403
     target_type = data.get("target_type")
     target_id = int(data.get("target_id") or 0)
     content = (data.get("content") or "").strip()
@@ -305,7 +400,7 @@ def add_review():
     return jsonify({"ok": True, "review": _review_view(rec, me.id)})
 
 
-@bp.route("/api/glass/review/<int:review_id>/vote", methods=["POST"])
+@bp.route("/api/board/review/<int:review_id>/vote", methods=["POST"])
 def vote_review(review_id):
     me = current_user()
     data = request.get_json(force=True, silent=True) or {}
@@ -317,7 +412,7 @@ def vote_review(review_id):
         return jsonify({"ok": False, "error": "参数不对"}), 400
     rec = ReviewVote.query.filter_by(review_id=review_id, user_id=me.id).first()
     if rec and rec.value == value:
-        db.session.delete(rec)  # 再点一次 = 取消
+        db.session.delete(rec)
         db.session.commit()
         return jsonify({"ok": True, "my_vote": 0})
     if not rec:
@@ -326,4 +421,31 @@ def vote_review(review_id):
     rec.value = value
     db.session.commit()
     review = Review.query.get(review_id)
+    # 评价被点赞：作者 +2 修炼值
+    if value == 1 and review:
+        author = User.query.get(review.author_id)
+        if author:
+            try:
+                from services import add_exp
+
+                add_exp(author, "like", ref_id=review.id, desc="评价被点赞")
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
     return jsonify({"ok": True, "my_vote": value, "ups": review.ups, "downs": review.downs})
+
+
+# ---------- 兼容旧链接 ----------
+@bp.route("/glass/brokerage/<int:brokerage_id>")
+def old_brokerage(brokerage_id):
+    return redirect(url_for("glass.org_detail", key="wealth", org_id=brokerage_id))
+
+
+@bp.route("/glass/team/<int:team_id>")
+def old_team(team_id):
+    return redirect(url_for("glass.team_detail", key="wealth", team_id=team_id))
+
+
+@bp.route("/glass/rank/<kind>")
+def old_rank(kind):
+    return redirect(url_for("glass.rank", key="wealth", kind=kind))

@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}机构与团队 · 研友管理后台{% endblock %}
+{% block content %}
+<h1 class="h1">机构与团队</h1>
+<p class="caption mt-8">可修改券商 / 买方机构及其下属团队的名称。</p>
+
+{% for grp in groups %}
+<section class="mt-32">
+  <h2 class="h2">{{ grp.label }}（{{ grp['items']|length }}）</h2>
+  {% for item in grp['items'] %}
+  <div class="card mt-12" style="padding:16px">
+    <div class="flex between center wrap" style="gap:8px">
+      <div style="min-width:0">
+        <strong>{{ item.org.name }}</strong>
+        <span class="caption" style="display:block">{{ item.org.intro or '' }}</span>
+      </div>
+      <button type="button" class="btn btn-ghost" data-rename-org="{{ item.org.id }}" data-name="{{ item.org.name }}">改名</button>
+    </div>
+    {% if item.teams %}
+    <div class="mt-12" style="padding-left:12px;border-left:2px solid var(--line)">
+      {% for t in item.teams %}
+      <div class="flex between center" style="padding:6px 0">
+        <span class="caption truncate">{{ t.name }}</span>
+        <button type="button" class="btn btn-ghost" data-rename-team="{{ t.id }}" data-name="{{ t.name }}">改名</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="caption mt-8">还没有团队</p>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="empty mt-12"><div class="display">还没有{{ grp.label }}</div></div>
+  {% endfor %}
+</section>
+{% endfor %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  function rename(url, oldName, label) {
+    var name = window.prompt("输入新的" + label + "名称", oldName);
+    if (name === null) return;
+    name = name.trim();
+    if (!name) { showToast("名称不能为空", "error"); return; }
+    api(url, { method: "POST", body: JSON.stringify({ name: name }) }).then(function (r) {
+      if (!r.ok) { showToast(r.error || "修改失败", "error"); return; }
+      showToast("已改名为「" + r.name + "」", "success");
+      setTimeout(function () { location.reload(); }, 600);
+    });
+  }
+  qsa("[data-rename-org]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      rename("/admin/api/orgs/" + b.getAttribute("data-rename-org") + "/rename", b.getAttribute("data-name"), "机构");
+    });
+  });
+  qsa("[data-rename-team]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      rename("/admin/api/teams/" + b.getAttribute("data-rename-team") + "/rename", b.getAttribute("data-name"), "团队");
+    });
+  });
+})();
+</script>
+{% endblock %}
